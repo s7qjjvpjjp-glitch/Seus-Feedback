@@ -1,0 +1,48 @@
+[
+  {
+    "nome": "ANA MARIA SILVA",
+    "nascimento": "15/03/1985",
+    "listas": ["Lista A", "Lista B"],
+    "pendencias": [
+      "Atualizar documentação médica",
+      "Agendar retorno em 30 dias",
+      "Realizar exame de sangue"
+    ]
+  },
+  {
+    "nome": "CARLOS EDUARDO SOUZA",
+    "nascimento": "22/07/1972",
+    "listas": ["Lista A"],
+    "pendencias": [
+      "Confirmar medicação atual",
+      "Encaminhar para especialista"
+    ]
+  },
+  {
+    "nome": "MARIA JOSE OLIVEIRA",
+    "nascimento": "10/11/1990",
+    "listas": ["Lista B", "Lista C"],
+    "pendencias": [
+      "Aguardando resultado de exame",
+      "Renovar receita médica",
+      "Agendar fisioterapia"
+    ]
+  },
+  {
+    "nome": "JOSE ANTONIO FERREIRA",
+    "nascimento": "05/02/1965",
+    "listas": ["Lista C"],
+    "pendencias": [
+      "Consulta de acompanhamento pendente"
+    ]
+  },
+  {
+    "nome": "FERNANDA COSTA LIMA",
+    "nascimento": "30/09/1998",
+    "listas": ["Lista A", "Lista C"],
+    "pendencias": [
+      "Atualizar cadastro",
+      "Exame de retorno pendente"
+    ]
+  }
+]
