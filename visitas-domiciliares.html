@@ -6,25 +6,20 @@
 <title>Visitas Domiciliares — Equipe Aquarela</title>
 <link rel="stylesheet" href="css/aquarela.css"/>
 <link rel="stylesheet" href="css/dashboard.css"/>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="js/config.js"></script>
 <script src="js/auth.js"></script>
 </head>
 <body>
 <div class="app-layout">
-
   <aside class="sidebar" id="sidebar">
-    <div class="sidebar-logo">
-      <div class="sidebar-logo-text">Aquarela</div>
-      <div class="sidebar-logo-sub">Equipe de Saúde</div>
-    </div>
+    <div class="sidebar-logo"><div class="sidebar-logo-text">Aquarela</div><div class="sidebar-logo-sub">Equipe de Saúde</div></div>
     <nav class="sidebar-nav">
       <div class="sidebar-section-label">Principal</div>
       <a href="dashboard.html" class="nav-item"><span class="nav-icon">🏠</span> Dashboard</a>
-      <a href="visitas-domiciliares.html" class="nav-item active">
-        <span class="nav-icon">🏡</span> Visitas Domiciliares
-        <span class="notif-badge" id="visitasBadge"></span>
-      </a>
+      <a href="visitas-domiciliares.html" class="nav-item active"><span class="nav-icon">🏡</span> Visitas Domiciliares<span class="notif-badge" id="visitasBadge"></span></a>
       <a href="visitas-acs.html" class="nav-item"><span class="nav-icon">📊</span> Área de Visitas ACS</a>
       <a href="metas.html" class="nav-item"><span class="nav-icon">🎯</span> Metas</a>
       <a href="agenda.html" class="nav-item"><span class="nav-icon">📅</span> Agenda</a>
@@ -33,10 +28,7 @@
     </nav>
     <div class="sidebar-user">
       <div class="user-avatar" data-user-initial>A</div>
-      <div class="user-info">
-        <div class="user-name" data-user-name>Usuário</div>
-        <div class="user-role" data-user-role>Profissional</div>
-      </div>
+      <div class="user-info"><div class="user-name" data-user-name>Usuário</div><div class="user-role" data-user-role>Profissional</div></div>
       <button class="btn-logout" onclick="logout()">↩</button>
     </div>
   </aside>
@@ -59,7 +51,6 @@
         <p>Controle de visitas e datas de retorno dos pacientes</p>
       </div>
 
-      <!-- Alert Banner -->
       <div class="alert-banner" id="alertBanner" style="display:none;">
         <div class="alert-banner-icon">⏰</div>
         <div>
@@ -68,49 +59,32 @@
         </div>
       </div>
 
-      <!-- Stats Row -->
       <div class="stats-grid" style="grid-template-columns:repeat(auto-fill,minmax(160px,1fr));margin-bottom:24px;">
-        <div class="stat-card">
-          <div class="stat-icon stat-icon-gold">⏳</div>
-          <div class="stat-value" id="statPending">-</div>
-          <div class="stat-label">Pendentes</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-icon stat-icon-rose">🔥</div>
-          <div class="stat-value" id="statUrgent">-</div>
-          <div class="stat-label">Retorno ≤ 3 dias</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-icon stat-icon-green">✅</div>
-          <div class="stat-value" id="statDone">-</div>
-          <div class="stat-label">Concluídas</div>
-        </div>
+        <div class="stat-card"><div class="stat-icon stat-icon-gold">⏳</div><div class="stat-value" id="statPending">-</div><div class="stat-label">Pendentes</div></div>
+        <div class="stat-card"><div class="stat-icon stat-icon-rose">🔥</div><div class="stat-value" id="statUrgent">-</div><div class="stat-label">Retorno ≤ 3 dias</div></div>
+        <div class="stat-card"><div class="stat-icon stat-icon-green">✅</div><div class="stat-value" id="statDone">-</div><div class="stat-label">Concluídas</div></div>
       </div>
 
-      <!-- Filter bar -->
       <div class="section-card" style="margin-bottom:24px;">
         <div style="padding:16px 20px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
-          <select class="form-select" id="filterStatus" style="width:auto;" onchange="loadVisitas()">
+          <select class="form-select" id="filterStatus" style="width:auto" onchange="renderTable()">
             <option value="all">Todos os status</option>
             <option value="pending">Pendentes</option>
             <option value="completed">Concluídas</option>
           </select>
-          <input class="form-input" id="filterSearch" style="width:220px;" placeholder="Buscar paciente ou ACS…" oninput="loadVisitas()"/>
-          <span style="margin-left:auto;font-size:0.83rem;color:var(--text-soft);" id="visitasCount"></span>
+          <input class="form-input" id="filterSearch" style="width:220px" placeholder="Buscar paciente ou ACS…" oninput="renderTable()"/>
+          <span style="margin-left:auto;font-size:.83rem;color:var(--text-soft)" id="visitasCount"></span>
         </div>
       </div>
 
-      <!-- Table -->
       <div class="section-card">
-        <div class="section-card-body" id="visitasTable">
-          <div class="spinner"></div>
-        </div>
+        <div class="section-card-body" id="visitasTable"><div class="spinner"></div></div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Modal Nova Visita -->
+<!-- Modal -->
 <div class="modal-overlay" id="visitaModal">
   <div class="modal">
     <div class="modal-header">
@@ -119,28 +93,13 @@
     </div>
     <form id="visitaForm">
       <input type="hidden" id="editId"/>
-      <div class="form-group">
-        <label class="form-label">Nome do Paciente *</label>
-        <input type="text" id="fPatient" class="form-input" placeholder="Nome completo" required/>
-      </div>
-      <div class="form-group">
-        <label class="form-label">ACS Responsável *</label>
-        <input type="text" id="fAcs" class="form-input" placeholder="Nome do ACS" required/>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Data de Retorno *</label>
-        <input type="date" id="fReturn" class="form-input" required/>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Anotações</label>
-        <textarea id="fNotes" class="form-textarea" placeholder="Observações sobre a visita…"></textarea>
-      </div>
-      <div class="form-group" id="statusGroup" style="display:none;">
+      <div class="form-group"><label class="form-label">Nome do Paciente *</label><input type="text" id="fPatient" class="form-input" required/></div>
+      <div class="form-group"><label class="form-label">ACS Responsável *</label><input type="text" id="fAcs" class="form-input" required/></div>
+      <div class="form-group"><label class="form-label">Data de Retorno *</label><input type="date" id="fReturn" class="form-input" required/></div>
+      <div class="form-group"><label class="form-label">Anotações</label><textarea id="fNotes" class="form-textarea" placeholder="Observações sobre a visita…"></textarea></div>
+      <div class="form-group" id="statusGroup" style="display:none">
         <label class="form-label">Status</label>
-        <select id="fStatus" class="form-select">
-          <option value="pending">Pendente</option>
-          <option value="completed">Concluída</option>
-        </select>
+        <select id="fStatus" class="form-select"><option value="pending">Pendente</option><option value="completed">Concluída</option></select>
       </div>
       <div style="display:flex;gap:12px;margin-top:8px;">
         <button type="button" class="btn btn-ghost btn-full" onclick="closeModal()">Cancelar</button>
@@ -155,172 +114,137 @@ const user = requireAuth();
 populateUserUI();
 requestNotificationPermission();
 
-const sb = getSupabase();
+const db = getDB();
+let allVisitas = [];
 
 async function loadVisitas() {
-  const status = document.getElementById('filterStatus').value;
-  const search = document.getElementById('filterSearch').value.toLowerCase();
+  const snap = await db.collection('visitas_domiciliares').orderBy('return_date').get();
+  allVisitas = snap.docs.map(d => ({id:d.id,...d.data()}));
 
-  let query = sb.from('visitas_domiciliares').select('*').order('return_date', { ascending: true });
-  if (status !== 'all') query = query.eq('status', status);
+  const today = new Date(); today.setHours(0,0,0,0);
+  const todayStr = today.toISOString().split('T')[0];
+  const in3Str   = new Date(today.getTime()+3*86400000).toISOString().split('T')[0];
 
-  const { data, error } = await query;
-  if (error) { showToast('Erro ao carregar visitas.', 'error'); return; }
-
-  const filtered = data?.filter(v =>
-    !search ||
-    v.patient_name.toLowerCase().includes(search) ||
-    v.acs_responsible.toLowerCase().includes(search)
-  ) || [];
-
-  document.getElementById('visitasCount').textContent = `${filtered.length} registro(s)`;
-
-  const today = new Date().toISOString().split('T')[0];
-  const in3 = new Date(Date.now() + 3*86400000).toISOString().split('T')[0];
-  const pending = data?.filter(v => v.status === 'pending').length ?? 0;
-  const urgent  = data?.filter(v => v.status === 'pending' && v.return_date <= in3 && v.return_date >= today).length ?? 0;
-  const done    = data?.filter(v => v.status === 'completed').length ?? 0;
+  const pending = allVisitas.filter(v => v.status==='pending').length;
+  const urgent  = allVisitas.filter(v => v.status==='pending' && v.return_date<=in3Str && v.return_date>=todayStr).length;
+  const done    = allVisitas.filter(v => v.status==='completed').length;
 
   document.getElementById('statPending').textContent = pending;
-  document.getElementById('statUrgent').textContent = urgent;
-  document.getElementById('statDone').textContent = done;
+  document.getElementById('statUrgent').textContent  = urgent;
+  document.getElementById('statDone').textContent    = done;
 
   if (urgent > 0) {
+    const urgentList = allVisitas.filter(v => v.status==='pending' && v.return_date<=in3Str && v.return_date>=todayStr);
     document.getElementById('alertBanner').style.display = 'flex';
     document.getElementById('alertTitle').textContent = `${urgent} visita(s) com retorno nos próximos 3 dias!`;
-    document.getElementById('alertText').textContent = data
-      .filter(v => v.status === 'pending' && v.return_date <= in3 && v.return_date >= today)
-      .map(v => `${v.patient_name} (${formatDate(v.return_date)})`)
-      .join(' • ');
+    document.getElementById('alertText').textContent  = urgentList.map(v=>`${v.patient_name} (${formatDate(v.return_date)})`).join(' • ');
     showNotificationBadge(urgent);
   }
 
-  if (filtered.length === 0) {
-    document.getElementById('visitasTable').innerHTML =
-      '<div class="empty-state"><div class="empty-state-icon">🏡</div><p>Nenhuma visita encontrada</p></div>';
+  renderTable();
+}
+
+function renderTable() {
+  const statusF = document.getElementById('filterStatus').value;
+  const search  = document.getElementById('filterSearch').value.toLowerCase();
+  const filtered = allVisitas.filter(v =>
+    (statusF==='all' || v.status===statusF) &&
+    (!search || v.patient_name.toLowerCase().includes(search) || v.acs_responsible.toLowerCase().includes(search))
+  );
+
+  document.getElementById('visitasCount').textContent = `${filtered.length} registro(s)`;
+
+  if (filtered.length===0) {
+    document.getElementById('visitasTable').innerHTML='<div class="empty-state"><div class="empty-state-icon">🏡</div><p>Nenhuma visita encontrada</p></div>';
     return;
   }
 
-  document.getElementById('visitasTable').innerHTML = `
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Paciente</th>
-            <th>ACS Responsável</th>
-            <th>Retorno</th>
-            <th>Anotações</th>
-            <th>Status</th>
-            <th>Ações</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${filtered.map(v => {
-            const days = daysUntil(v.return_date);
-            const dateCls = v.status === 'pending' && days <= 3 && days >= 0 ? 'return-soon' : '';
-            const dateLabel = v.status === 'pending'
-              ? (days === 0 ? ' (hoje)' : days === 1 ? ' (amanhã)' : days < 0 ? ' (atrasado)' : '')
-              : '';
-            const statusBadge = v.status === 'pending'
-              ? '<span class="badge badge-pending">Pendente</span>'
-              : '<span class="badge badge-done">Concluída</span>';
-            return `<tr>
-              <td style="font-weight:600;">${v.patient_name}</td>
-              <td>${v.acs_responsible}</td>
-              <td class="${dateCls}">${formatDate(v.return_date)}${dateLabel}</td>
-              <td style="max-width:200px;font-size:0.85rem;color:var(--text-soft);">${v.notes || '—'}</td>
-              <td>${statusBadge}</td>
-              <td>
-                <button onclick="editVisita(${JSON.stringify(v).replace(/"/g,'&quot;')})" class="btn btn-ghost btn-sm">✏️</button>
-                ${v.status === 'pending'
-                  ? `<button onclick="markDone('${v.id}')" class="btn btn-success btn-sm">✅</button>`
-                  : ''}
-                <button onclick="deleteVisita('${v.id}')" class="btn btn-ghost btn-sm" style="color:var(--danger);">🗑</button>
-              </td>
-            </tr>`;
-          }).join('')}
-        </tbody>
-      </table>
-    </div>`;
+  document.getElementById('visitasTable').innerHTML = `<div class="table-wrap"><table>
+    <thead><tr><th>Paciente</th><th>ACS Responsável</th><th>Retorno</th><th>Anotações</th><th>Status</th><th>Ações</th></tr></thead>
+    <tbody>${filtered.map(v => {
+      const days = daysUntil(v.return_date);
+      const dateCls = v.status==='pending' && days<=3 && days>=0 ? 'return-soon' : '';
+      const dateLabel = v.status==='pending' ? (days===0?' (hoje)':days===1?' (amanhã)':days<0?' (atrasado)':'') : '';
+      const badge = v.status==='pending' ? '<span class="badge badge-pending">Pendente</span>' : '<span class="badge badge-done">Concluída</span>';
+      const vJson = JSON.stringify(v).replace(/"/g,'&quot;');
+      return `<tr>
+        <td style="font-weight:600">${v.patient_name}</td>
+        <td>${v.acs_responsible}</td>
+        <td class="${dateCls}">${formatDate(v.return_date)}${dateLabel}</td>
+        <td style="max-width:200px;font-size:.85rem;color:var(--text-soft)">${v.notes||'—'}</td>
+        <td>${badge}</td>
+        <td>
+          <button onclick="editVisita(${vJson})" class="btn btn-ghost btn-sm">✏️</button>
+          ${v.status==='pending'?`<button onclick="markDone('${v.id}')" class="btn btn-success btn-sm">✅</button>`:''}
+          <button onclick="deleteVisita('${v.id}')" class="btn btn-ghost btn-sm" style="color:var(--danger)">🗑</button>
+        </td>
+      </tr>`;
+    }).join('')}</tbody></table></div>`;
 }
 
-function openModal(resetOnly = true) {
-  if (resetOnly) {
-    document.getElementById('editId').value = '';
-    document.getElementById('modalTitle').textContent = 'Nova Visita Domiciliar';
-    document.getElementById('visitaForm').reset();
-    document.getElementById('statusGroup').style.display = 'none';
-  }
+function openModal() {
+  document.getElementById('editId').value='';
+  document.getElementById('modalTitle').textContent='Nova Visita Domiciliar';
+  document.getElementById('visitaForm').reset();
+  document.getElementById('statusGroup').style.display='none';
   document.getElementById('visitaModal').classList.add('open');
 }
-
-function closeModal() {
-  document.getElementById('visitaModal').classList.remove('open');
-}
+function closeModal() { document.getElementById('visitaModal').classList.remove('open'); }
 
 function editVisita(v) {
-  document.getElementById('editId').value = v.id;
-  document.getElementById('modalTitle').textContent = 'Editar Visita';
-  document.getElementById('fPatient').value = v.patient_name;
-  document.getElementById('fAcs').value = v.acs_responsible;
-  document.getElementById('fReturn').value = v.return_date;
-  document.getElementById('fNotes').value = v.notes || '';
-  document.getElementById('fStatus').value = v.status;
-  document.getElementById('statusGroup').style.display = 'block';
-  openModal(false);
+  document.getElementById('editId').value=v.id;
+  document.getElementById('modalTitle').textContent='Editar Visita';
+  document.getElementById('fPatient').value=v.patient_name;
+  document.getElementById('fAcs').value=v.acs_responsible;
+  document.getElementById('fReturn').value=v.return_date;
+  document.getElementById('fNotes').value=v.notes||'';
+  document.getElementById('fStatus').value=v.status;
+  document.getElementById('statusGroup').style.display='block';
+  document.getElementById('visitaModal').classList.add('open');
 }
 
 async function markDone(id) {
   if (!confirm('Marcar visita como concluída?')) return;
-  const { error } = await sb.from('visitas_domiciliares').update({ status: 'completed' }).eq('id', id);
-  if (error) { showToast('Erro ao atualizar.', 'error'); return; }
-  showToast('Visita concluída!', 'success');
+  await db.collection('visitas_domiciliares').doc(id).update({status:'completed'});
+  showToast('Visita concluída!','success');
   loadVisitas();
 }
 
 async function deleteVisita(id) {
   if (!confirm('Excluir esta visita?')) return;
-  const { error } = await sb.from('visitas_domiciliares').delete().eq('id', id);
-  if (error) { showToast('Erro ao excluir.', 'error'); return; }
-  showToast('Visita excluída.', 'info');
+  await db.collection('visitas_domiciliares').doc(id).delete();
+  showToast('Visita excluída.','info');
   loadVisitas();
 }
 
 document.getElementById('visitaForm').addEventListener('submit', async e => {
   e.preventDefault();
   const btn = document.getElementById('saveBtn');
-  btn.textContent = 'Salvando…'; btn.disabled = true;
-
+  btn.textContent='Salvando…'; btn.disabled=true;
   const editId = document.getElementById('editId').value;
   const payload = {
     patient_name:    document.getElementById('fPatient').value.trim(),
     acs_responsible: document.getElementById('fAcs').value.trim(),
     return_date:     document.getElementById('fReturn').value,
     notes:           document.getElementById('fNotes').value.trim(),
-    status:          document.getElementById('fStatus').value || 'pending',
-    created_by:      user.id
+    status:          document.getElementById('fStatus').value||'pending',
+    created_by:      user.id,
+    created_at:      nowTimestamp()
   };
-
-  const { error } = editId
-    ? await sb.from('visitas_domiciliares').update(payload).eq('id', editId)
-    : await sb.from('visitas_domiciliares').insert(payload);
-
-  if (error) {
-    showToast('Erro ao salvar.', 'error');
-  } else {
-    showToast(editId ? 'Visita atualizada!' : 'Visita adicionada!', 'success');
-    closeModal();
-    loadVisitas();
-  }
-
-  btn.textContent = 'Salvar'; btn.disabled = false;
+  try {
+    if (editId) await db.collection('visitas_domiciliares').doc(editId).update(payload);
+    else await db.collection('visitas_domiciliares').add(payload);
+    showToast(editId?'Visita atualizada!':'Visita adicionada!','success');
+    closeModal(); loadVisitas();
+  } catch { showToast('Erro ao salvar.','error'); }
+  btn.textContent='Salvar'; btn.disabled=false;
 });
 
 function openSidebar()  { document.getElementById('sidebar').classList.add('open'); document.getElementById('sidebarOverlay').classList.add('open'); }
 function closeSidebar() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('sidebarOverlay').classList.remove('open'); }
 
 loadVisitas();
-setInterval(loadVisitas, 60 * 60 * 1000);
+setInterval(loadVisitas, 3600000);
 </script>
 </body>
 </html>

@@ -1,74 +1,62 @@
-// auth.js — Autenticação e sessão da Equipe Aquarela
+// auth.js — Autenticação e sessão com Firebase
 
-let _supabase = null;
+let _app = null;
+let _auth = null;
+let _db = null;
 
-function getSupabase() {
-  if (!_supabase) {
-    _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+function initFirebase() {
+  if (!_app) {
+    _app  = firebase.initializeApp(firebaseConfig);
+    _auth = firebase.auth();
+    _db   = firebase.firestore();
   }
-  return _supabase;
+  return { auth: _auth, db: _db };
 }
 
+function getDB()   { return initFirebase().db; }
+function getAuth() { return initFirebase().auth; }
+
+// ── Login ──
 async function login(username, password) {
-  const sb = getSupabase();
+  initFirebase();
   const email = `${username.trim().toLowerCase()}@aquarela.app`;
 
-  const { data, error } = await sb.auth.signInWithPassword({ email, password });
-  if (error) throw new Error('Usuário ou senha inválidos.');
+  const credential = await _auth.signInWithEmailAndPassword(email, password)
+    .catch(() => { throw new Error('Usuário ou senha inválidos.'); });
 
-  const { data: profile, error: profileErr } = await sb
-    .from('user_profiles')
-    .select('*')
-    .eq('id', data.user.id)
-    .single();
+  const profileDoc = await _db.collection('user_profiles').doc(credential.user.uid).get();
+  if (!profileDoc.exists) throw new Error('Perfil não encontrado. Contate o administrador.');
 
-  if (profileErr || !profile) throw new Error('Perfil não encontrado.');
-
-  const session = {
-    id: data.user.id,
-    username: profile.username,
-    name: profile.name,
-    role: profile.role,
-    area: profile.area,
-    avatar_url: profile.avatar_url
-  };
-
-  localStorage.setItem('aquarela_session', JSON.stringify(session));
-  return session;
+  const profile = { id: profileDoc.id, ...profileDoc.data() };
+  localStorage.setItem('aquarela_session', JSON.stringify(profile));
+  return profile;
 }
 
+// ── Logout ──
 async function logout() {
-  const sb = getSupabase();
-  await sb.auth.signOut();
+  initFirebase();
+  await _auth.signOut();
   localStorage.removeItem('aquarela_session');
-  window.location.href = '/login.html';
+  window.location.href = 'login.html';
 }
 
 function getCurrentUser() {
   try {
-    const stored = localStorage.getItem('aquarela_session');
-    return stored ? JSON.parse(stored) : null;
-  } catch {
-    return null;
-  }
+    const s = localStorage.getItem('aquarela_session');
+    return s ? JSON.parse(s) : null;
+  } catch { return null; }
 }
 
 function requireAuth() {
   const user = getCurrentUser();
-  if (!user) {
-    window.location.href = 'login.html';
-    return null;
-  }
+  if (!user) { window.location.href = 'login.html'; return null; }
   return user;
 }
 
 function requireMaster() {
   const user = requireAuth();
   if (!user) return null;
-  if (user.role !== 'master') {
-    window.location.href = 'dashboard.html';
-    return null;
-  }
+  if (user.role !== 'master') { window.location.href = 'dashboard.html'; return null; }
   return user;
 }
 
@@ -77,82 +65,68 @@ function isMaster() {
   return user && user.role === 'master';
 }
 
-// Preenche elementos com data-user-name e data-user-role na página
+// ── Preenche elementos na página com dados do usuário ──
 function populateUserUI() {
   const user = getCurrentUser();
   if (!user) return;
-
-  document.querySelectorAll('[data-user-name]').forEach(el => {
-    el.textContent = user.name;
-  });
-  document.querySelectorAll('[data-user-role]').forEach(el => {
-    el.textContent = user.role === 'master' ? 'Administrador' : 'Profissional';
-  });
-  document.querySelectorAll('[data-user-initial]').forEach(el => {
-    el.textContent = user.name.charAt(0).toUpperCase();
-  });
-  document.querySelectorAll('[data-master-only]').forEach(el => {
-    if (user.role !== 'master') el.style.display = 'none';
-  });
+  document.querySelectorAll('[data-user-name]').forEach(el => el.textContent = user.name);
+  document.querySelectorAll('[data-user-role]').forEach(el => el.textContent = user.role === 'master' ? 'Administrador' : 'Profissional');
+  document.querySelectorAll('[data-user-initial]').forEach(el => el.textContent = user.name.charAt(0).toUpperCase());
+  document.querySelectorAll('[data-master-only]').forEach(el => { if (user.role !== 'master') el.style.display = 'none'; });
 }
 
-// Verifica visitas com retorno em ≤3 dias e exibe notificações
+// ── Notificações de visitas com retorno próximo ──
 async function checkReturnVisits() {
-  const sb = getSupabase();
-  const today = new Date().toISOString().split('T')[0];
-  const inThreeDays = new Date(Date.now() + 3 * 86400000).toISOString().split('T')[0];
+  const db = getDB();
+  const today = new Date(); today.setHours(0,0,0,0);
+  const todayStr = today.toISOString().split('T')[0];
+  const in3 = new Date(today.getTime() + 3 * 86400000).toISOString().split('T')[0];
 
-  const { data: visitas } = await sb
-    .from('visitas_domiciliares')
-    .select('*')
-    .eq('status', 'pending')
-    .lte('return_date', inThreeDays)
-    .gte('return_date', today);
+  const snap = await db.collection('visitas_domiciliares')
+    .where('status', '==', 'pending')
+    .where('return_date', '>=', todayStr)
+    .where('return_date', '<=', in3)
+    .get();
 
-  if (!visitas || visitas.length === 0) return;
-
-  showNotificationBadge(visitas.length);
-
-  if ('Notification' in window && Notification.permission === 'granted') {
-    new Notification('Equipe Aquarela', {
-      body: `${visitas.length} visita(s) com retorno próximo!`,
-      icon: 'assets/logo-aquarela.svg'
-    });
+  const visitas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  if (visitas.length > 0) {
+    showNotificationBadge(visitas.length);
+    if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification('Equipe Aquarela', {
+        body: `${visitas.length} visita(s) com retorno próximo!`,
+      });
+    }
   }
-
   return visitas;
 }
 
 function showNotificationBadge(count) {
-  const badges = document.querySelectorAll('.notif-badge');
-  badges.forEach(b => {
+  document.querySelectorAll('.notif-badge').forEach(b => {
     b.textContent = count;
     b.style.display = count > 0 ? 'inline-flex' : 'none';
   });
 }
 
-// Solicita permissão de notificação do browser
 function requestNotificationPermission() {
   if ('Notification' in window && Notification.permission === 'default') {
     Notification.requestPermission();
   }
 }
 
-// Formata data ISO para DD/MM/YYYY
-function formatDate(iso) {
-  if (!iso) return '';
-  const [y, m, d] = iso.split('-');
+// ── Utilitários de data ──
+function formatDate(str) {
+  if (!str) return '';
+  const [y, m, d] = str.split('-');
   return `${d}/${m}/${y}`;
 }
 
-// Retorna diferença em dias entre hoje e uma data
 function daysUntil(dateStr) {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const today = new Date(); today.setHours(0,0,0,0);
   const target = new Date(dateStr + 'T00:00:00');
   return Math.round((target - today) / 86400000);
 }
 
+// ── Toast ──
 function showToast(msg, type = 'info', duration = 4000) {
   let container = document.getElementById('toast-container');
   if (!container) {
@@ -161,23 +135,18 @@ function showToast(msg, type = 'info', duration = 4000) {
     container.style.cssText = 'position:fixed;top:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:10px;';
     document.body.appendChild(container);
   }
-
+  const colors = { info:'#6A9AB0', success:'#6BAE8C', warning:'#E8A44A', error:'#D4706A' };
   const toast = document.createElement('div');
-  const colors = { info: '#6A9AB0', success: '#6BAE8C', warning: '#E8A44A', error: '#D4706A' };
-  toast.style.cssText = `
-    background:${colors[type] || colors.info};
-    color:#fff;padding:14px 20px;border-radius:10px;
-    box-shadow:0 4px 16px rgba(0,0,0,0.15);
-    font-family:'Inter',sans-serif;font-size:14px;
-    max-width:320px;animation:slideIn 0.3s ease;
-  `;
+  toast.style.cssText = `background:${colors[type]||colors.info};color:#fff;padding:14px 20px;border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,0.15);font-family:'Inter',sans-serif;font-size:14px;max-width:320px;animation:slideIn 0.3s ease;`;
   toast.textContent = msg;
   container.appendChild(toast);
-
   setTimeout(() => {
-    toast.style.opacity = '0';
-    toast.style.transform = 'translateX(100px)';
-    toast.style.transition = 'all 0.3s ease';
+    toast.style.opacity='0'; toast.style.transform='translateX(100px)'; toast.style.transition='all 0.3s ease';
     setTimeout(() => toast.remove(), 300);
   }, duration);
+}
+
+// ── Timestamp agora ──
+function nowTimestamp() {
+  return firebase.firestore.FieldValue.serverTimestamp();
 }

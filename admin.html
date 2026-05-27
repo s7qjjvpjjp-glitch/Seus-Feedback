@@ -6,22 +6,20 @@
 <title>Administração — Equipe Aquarela</title>
 <link rel="stylesheet" href="css/aquarela.css"/>
 <link rel="stylesheet" href="css/dashboard.css"/>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="js/config.js"></script>
 <script src="js/auth.js"></script>
 <style>
 .admin-tabs { display:flex;gap:8px;margin-bottom:24px;background:var(--accent);border-radius:var(--radius-md);padding:4px; }
-.admin-tab { flex:1;padding:10px 16px;border-radius:var(--radius-sm);border:none;background:transparent;font-family:var(--font-body);font-size:0.9rem;font-weight:600;cursor:pointer;color:var(--text-soft);transition:all 0.2s; }
+.admin-tab { flex:1;padding:10px 16px;border-radius:var(--radius-sm);border:none;background:transparent;font-family:var(--font-body);font-size:.9rem;font-weight:600;cursor:pointer;color:var(--text-soft);transition:all .2s; }
 .admin-tab.active { background:var(--bg-card);color:var(--primary);box-shadow:var(--shadow-sm); }
 .tab-panel { display:none; }
 .tab-panel.active { display:block; }
-.team-member-row { display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid var(--border); }
-.team-member-row:last-child { border-bottom:none; }
-.member-photo {
-  width:52px;height:52px;border-radius:50%;background:var(--accent);
-  overflow:hidden;display:flex;align-items:center;justify-content:center;
-  font-size:1.6rem;flex-shrink:0;
-}
+.member-row { display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid var(--border); }
+.member-row:last-child { border-bottom:none; }
+.member-photo { width:52px;height:52px;border-radius:50%;background:var(--accent);overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:1.6rem;flex-shrink:0; }
 .member-photo img { width:100%;height:100%;object-fit:cover; }
 .user-row { display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid var(--border); }
 .user-row:last-child { border-bottom:none; }
@@ -29,12 +27,8 @@
 </head>
 <body>
 <div class="app-layout">
-
   <aside class="sidebar" id="sidebar">
-    <div class="sidebar-logo">
-      <div class="sidebar-logo-text">Aquarela</div>
-      <div class="sidebar-logo-sub">Equipe de Saúde</div>
-    </div>
+    <div class="sidebar-logo"><div class="sidebar-logo-text">Aquarela</div><div class="sidebar-logo-sub">Equipe de Saúde</div></div>
     <nav class="sidebar-nav">
       <div class="sidebar-section-label">Principal</div>
       <a href="dashboard.html" class="nav-item"><span class="nav-icon">🏠</span> Dashboard</a>
@@ -47,10 +41,7 @@
     </nav>
     <div class="sidebar-user">
       <div class="user-avatar" data-user-initial>A</div>
-      <div class="user-info">
-        <div class="user-name" data-user-name>Usuário</div>
-        <div class="user-role" data-user-role>Profissional</div>
-      </div>
+      <div class="user-info"><div class="user-name" data-user-name>Usuário</div><div class="user-role" data-user-role>Profissional</div></div>
       <button class="btn-logout" onclick="logout()">↩</button>
     </div>
   </aside>
@@ -65,39 +56,30 @@
     </header>
 
     <div class="page-body">
-      <div class="page-header">
-        <h1>Administração</h1>
-        <p>Gerencie a equipe e os usuários do sistema</p>
-      </div>
+      <div class="page-header"><h1>Administração</h1><p>Gerencie a equipe e os usuários do sistema</p></div>
 
       <div class="admin-tabs">
-        <button class="admin-tab active" onclick="switchTab('equipe', this)">👩‍⚕️ Equipe (Site Público)</button>
-        <button class="admin-tab" onclick="switchTab('usuarios', this)">👤 Usuários do Sistema</button>
+        <button class="admin-tab active" onclick="switchTab('equipe',this)">👩‍⚕️ Equipe (Site Público)</button>
+        <button class="admin-tab" onclick="switchTab('usuarios',this)">👤 Usuários do Sistema</button>
       </div>
 
-      <!-- Tab: Equipe -->
       <div class="tab-panel active" id="tabEquipe">
         <div class="section-card">
           <div class="section-card-header">
             <div class="section-card-title">Membros da Equipe</div>
             <button class="btn btn-primary btn-sm" onclick="openMemberModal()">+ Adicionar Membro</button>
           </div>
-          <div class="section-card-body" id="membersList">
-            <div class="spinner"></div>
-          </div>
+          <div class="section-card-body" id="membersList"><div class="spinner"></div></div>
         </div>
       </div>
 
-      <!-- Tab: Usuários -->
       <div class="tab-panel" id="tabUsuarios">
         <div class="section-card">
           <div class="section-card-header">
             <div class="section-card-title">Usuários do Sistema</div>
             <button class="btn btn-primary btn-sm" onclick="openUserModal()">+ Adicionar Usuário</button>
           </div>
-          <div class="section-card-body" id="usersList">
-            <div class="spinner"></div>
-          </div>
+          <div class="section-card-body" id="usersList"><div class="spinner"></div></div>
         </div>
       </div>
     </div>
@@ -107,34 +89,17 @@
 <!-- Modal Membro -->
 <div class="modal-overlay" id="memberModal">
   <div class="modal">
-    <div class="modal-header">
-      <h3 id="memberModalTitle">Adicionar Membro</h3>
-      <button class="modal-close" onclick="closeMemberModal()">✕</button>
-    </div>
+    <div class="modal-header"><h3 id="memberModalTitle">Adicionar Membro</h3><button class="modal-close" onclick="closeMemberModal()">✕</button></div>
     <form id="memberForm">
       <input type="hidden" id="editMemberId"/>
-      <div class="form-group">
-        <label class="form-label">Nome Completo *</label>
-        <input type="text" id="fMemberName" class="form-input" required/>
+      <div class="form-group"><label class="form-label">Nome Completo *</label><input type="text" id="fMemberName" class="form-input" required/></div>
+      <div class="form-group"><label class="form-label">Especialidade / Cargo</label><input type="text" id="fMemberSpecialty" class="form-input" placeholder="Ex: Enfermeira, ACS, Médico…"/></div>
+      <div class="form-group"><label class="form-label">Descrição</label><textarea id="fMemberDesc" class="form-textarea" placeholder="Breve apresentação…"></textarea></div>
+      <div class="form-group"><label class="form-label">URL da Foto (opcional)</label><input type="url" id="fMemberPhoto" class="form-input" placeholder="https://…"/>
+        <div style="font-size:.78rem;color:var(--text-soft);margin-top:4px">Cole um link de imagem ou deixe em branco para ícone padrão.</div>
       </div>
-      <div class="form-group">
-        <label class="form-label">Especialidade / Cargo</label>
-        <input type="text" id="fMemberSpecialty" class="form-input" placeholder="Ex: Enfermeira, ACS, Médico…"/>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Descrição</label>
-        <textarea id="fMemberDesc" class="form-textarea" placeholder="Uma breve apresentação do profissional…"></textarea>
-      </div>
-      <div class="form-group">
-        <label class="form-label">URL da Foto (opcional)</label>
-        <input type="url" id="fMemberPhoto" class="form-input" placeholder="https://…"/>
-        <div style="font-size:0.78rem;color:var(--text-soft);margin-top:4px;">Cole um link de imagem ou deixe em branco para usar ícone padrão.</div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Ordem de Exibição</label>
-        <input type="number" id="fMemberOrder" class="form-input" value="0" min="0"/>
-      </div>
-      <div style="display:flex;gap:12px;margin-top:8px;">
+      <div class="form-group"><label class="form-label">Ordem de Exibição</label><input type="number" id="fMemberOrder" class="form-input" value="0" min="0"/></div>
+      <div style="display:flex;gap:12px;margin-top:8px">
         <button type="button" class="btn btn-ghost btn-full" onclick="closeMemberModal()">Cancelar</button>
         <button type="submit" class="btn btn-primary btn-full" id="saveMemberBtn">Salvar</button>
       </div>
@@ -145,45 +110,25 @@
 <!-- Modal Usuário -->
 <div class="modal-overlay" id="userModal">
   <div class="modal">
-    <div class="modal-header">
-      <h3 id="userModalTitle">Adicionar Usuário</h3>
-      <button class="modal-close" onclick="closeUserModal()">✕</button>
-    </div>
+    <div class="modal-header"><h3>Adicionar Usuário</h3><button class="modal-close" onclick="closeUserModal()">✕</button></div>
     <form id="userForm">
-      <div style="background:#FFF8F0;border:1px solid #FED7AA;border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:20px;font-size:0.85rem;color:#92400E;">
+      <div style="background:#FFF8F0;border:1px solid #FED7AA;border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:20px;font-size:.85rem;color:#92400E;">
         ⚠️ O novo usuário poderá fazer login com o usuário e senha definidos aqui.
       </div>
-      <div class="form-group">
-        <label class="form-label">Nome Completo *</label>
-        <input type="text" id="fUserName" class="form-input" required/>
+      <div class="form-group"><label class="form-label">Nome Completo *</label><input type="text" id="fUserName" class="form-input" required/></div>
+      <div class="form-group"><label class="form-label">Usuário (login) *</label>
+        <input type="text" id="fUserUsername" class="form-input" placeholder="Ex: maria.silva" required oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9._-]/g,'')"/>
+        <div style="font-size:.78rem;color:var(--text-soft);margin-top:4px">Letras minúsculas, números, ponto, traço ou sublinhado.</div>
       </div>
-      <div class="form-group">
-        <label class="form-label">Usuário (login) *</label>
-        <input type="text" id="fUserUsername" class="form-input" placeholder="Ex: maria.silva" required
-          oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9._-]/g,'')"/>
-        <div style="font-size:0.78rem;color:var(--text-soft);margin-top:4px;">Apenas letras minúsculas, números, ponto, traço ou sublinhado.</div>
+      <div class="form-group"><label class="form-label">Senha *</label><input type="password" id="fUserPassword" class="form-input" minlength="6" required placeholder="Mínimo 6 caracteres"/></div>
+      <div class="form-group"><label class="form-label">Área</label>
+        <select id="fUserArea" class="form-select"><option value="">Sem área específica</option><option value="coelho">🐇 Coelho</option><option value="savassi">🌆 Savassi</option></select>
       </div>
-      <div class="form-group">
-        <label class="form-label">Senha *</label>
-        <input type="password" id="fUserPassword" class="form-input" minlength="6" required placeholder="Mínimo 6 caracteres"/>
+      <div class="form-group"><label class="form-label">Nível de Acesso</label>
+        <select id="fUserRole" class="form-select"><option value="professional">Profissional</option><option value="master">Administrador</option></select>
       </div>
-      <div class="form-group">
-        <label class="form-label">Área</label>
-        <select id="fUserArea" class="form-select">
-          <option value="">Sem área específica</option>
-          <option value="coelho">🐇 Coelho</option>
-          <option value="savassi">🌆 Savassi</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Nível de Acesso</label>
-        <select id="fUserRole" class="form-select">
-          <option value="professional">Profissional</option>
-          <option value="master">Administrador</option>
-        </select>
-      </div>
-      <div id="userFormError" style="display:none;background:#FFEBEE;border:1px solid #FFCDD2;border-radius:var(--radius-sm);padding:10px 14px;color:var(--danger);font-size:0.85rem;margin-bottom:12px;"></div>
-      <div style="display:flex;gap:12px;margin-top:8px;">
+      <div id="userFormError" style="display:none;background:#FFEBEE;border:1px solid #FFCDD2;border-radius:var(--radius-sm);padding:10px 14px;color:var(--danger);font-size:.85rem;margin-bottom:12px"></div>
+      <div style="display:flex;gap:12px;margin-top:8px">
         <button type="button" class="btn btn-ghost btn-full" onclick="closeUserModal()">Cancelar</button>
         <button type="submit" class="btn btn-primary btn-full" id="saveUserBtn">Criar Usuário</button>
       </div>
@@ -192,175 +137,139 @@
 </div>
 
 <script>
-const user = requireMaster();
-if (!user) { /* redirect handled */ }
+const user = requireMaster(); if(!user){}
 populateUserUI();
-
-const sb = getSupabase();
+const db = getDB();
 
 function switchTab(tab, btn) {
-  document.querySelectorAll('.admin-tab').forEach(b => b.classList.remove('active'));
-  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.admin-tab').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
   btn.classList.add('active');
-  document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
-  if (tab === 'equipe') loadMembers();
-  else loadUsers();
+  document.getElementById('tab'+tab.charAt(0).toUpperCase()+tab.slice(1)).classList.add('active');
+  if(tab==='equipe') loadMembers(); else loadUsers();
 }
 
 // ── Team Members ──
 async function loadMembers() {
-  const { data } = await sb.from('team_members').select('*').order('display_order');
+  const snap = await db.collection('team_members').orderBy('display_order').get();
   const el = document.getElementById('membersList');
-  if (!data || data.length === 0) {
-    el.innerHTML = '<div class="empty-state"><div class="empty-state-icon">👩‍⚕️</div><p>Nenhum membro cadastrado ainda</p><button class="btn btn-primary mt-2" onclick="openMemberModal()">Adicionar primeiro membro</button></div>';
-    return;
-  }
-  el.innerHTML = data.map(m => `
-    <div class="team-member-row">
-      <div class="member-photo">
-        ${m.photo_url ? `<img src="${m.photo_url}" alt="${m.name}"/>` : '👩‍⚕️'}
+  if(snap.empty){el.innerHTML='<div class="empty-state"><div class="empty-state-icon">👩‍⚕️</div><p>Nenhum membro cadastrado ainda</p><button class="btn btn-primary mt-2" onclick="openMemberModal()">Adicionar primeiro membro</button></div>';return;}
+  el.innerHTML=snap.docs.map(d=>{const m={id:d.id,...d.data()};return `
+    <div class="member-row">
+      <div class="member-photo">${m.photo_url?`<img src="${m.photo_url}" alt="${m.name}"/>`:'👩‍⚕️'}</div>
+      <div style="flex:1">
+        <div style="font-weight:600">${m.name}</div>
+        <div style="font-size:.82rem;color:var(--primary)">${m.specialty||''}</div>
+        <div style="font-size:.82rem;color:var(--text-soft);margin-top:2px">${m.description||''}</div>
       </div>
-      <div style="flex:1;">
-        <div style="font-weight:600;">${m.name}</div>
-        <div style="font-size:0.82rem;color:var(--primary);">${m.specialty || ''}</div>
-        <div style="font-size:0.82rem;color:var(--text-soft);margin-top:2px;">${m.description || ''}</div>
-      </div>
-      <div style="display:flex;gap:6px;">
+      <div style="display:flex;gap:6px">
         <button onclick="editMember(${JSON.stringify(m).replace(/"/g,'&quot;')})" class="btn btn-ghost btn-sm">✏️ Editar</button>
-        <button onclick="deleteMember('${m.id}')" class="btn btn-ghost btn-sm" style="color:var(--danger);">🗑</button>
+        <button onclick="deleteMember('${m.id}')" class="btn btn-ghost btn-sm" style="color:var(--danger)">🗑</button>
       </div>
-    </div>`).join('');
+    </div>`;}).join('');
 }
 
 function openMemberModal() {
-  document.getElementById('editMemberId').value = '';
-  document.getElementById('memberModalTitle').textContent = 'Adicionar Membro';
-  document.getElementById('memberForm').reset();
-  document.getElementById('memberModal').classList.add('open');
+  document.getElementById('editMemberId').value=''; document.getElementById('memberModalTitle').textContent='Adicionar Membro';
+  document.getElementById('memberForm').reset(); document.getElementById('memberModal').classList.add('open');
 }
 function closeMemberModal() { document.getElementById('memberModal').classList.remove('open'); }
 
 function editMember(m) {
-  document.getElementById('editMemberId').value = m.id;
-  document.getElementById('memberModalTitle').textContent = 'Editar Membro';
-  document.getElementById('fMemberName').value = m.name;
-  document.getElementById('fMemberSpecialty').value = m.specialty || '';
-  document.getElementById('fMemberDesc').value = m.description || '';
-  document.getElementById('fMemberPhoto').value = m.photo_url || '';
-  document.getElementById('fMemberOrder').value = m.display_order || 0;
-  document.getElementById('memberModal').classList.add('open');
+  document.getElementById('editMemberId').value=m.id; document.getElementById('memberModalTitle').textContent='Editar Membro';
+  document.getElementById('fMemberName').value=m.name; document.getElementById('fMemberSpecialty').value=m.specialty||'';
+  document.getElementById('fMemberDesc').value=m.description||''; document.getElementById('fMemberPhoto').value=m.photo_url||'';
+  document.getElementById('fMemberOrder').value=m.display_order||0; document.getElementById('memberModal').classList.add('open');
 }
 
 async function deleteMember(id) {
-  if (!confirm('Remover este membro da página pública?')) return;
-  await sb.from('team_members').delete().eq('id', id);
-  showToast('Membro removido.', 'info');
-  loadMembers();
+  if(!confirm('Remover este membro da página pública?')) return;
+  await db.collection('team_members').doc(id).delete();
+  showToast('Membro removido.','info'); loadMembers();
 }
 
 document.getElementById('memberForm').addEventListener('submit', async e => {
   e.preventDefault();
-  const btn = document.getElementById('saveMemberBtn');
-  btn.textContent = 'Salvando…'; btn.disabled = true;
-  const editId = document.getElementById('editMemberId').value;
-  const payload = {
-    name:          document.getElementById('fMemberName').value.trim(),
-    specialty:     document.getElementById('fMemberSpecialty').value.trim(),
-    description:   document.getElementById('fMemberDesc').value.trim(),
-    photo_url:     document.getElementById('fMemberPhoto').value.trim() || null,
-    display_order: parseInt(document.getElementById('fMemberOrder').value) || 0
-  };
-  const { error } = editId
-    ? await sb.from('team_members').update(payload).eq('id', editId)
-    : await sb.from('team_members').insert(payload);
-  if (error) { showToast('Erro ao salvar.', 'error'); }
-  else { showToast('Membro salvo!', 'success'); closeMemberModal(); loadMembers(); }
-  btn.textContent = 'Salvar'; btn.disabled = false;
+  const btn=document.getElementById('saveMemberBtn'); btn.textContent='Salvando…'; btn.disabled=true;
+  const editId=document.getElementById('editMemberId').value;
+  const payload={name:document.getElementById('fMemberName').value.trim(),specialty:document.getElementById('fMemberSpecialty').value.trim(),description:document.getElementById('fMemberDesc').value.trim(),photo_url:document.getElementById('fMemberPhoto').value.trim()||null,display_order:parseInt(document.getElementById('fMemberOrder').value)||0};
+  try {
+    if(editId) await db.collection('team_members').doc(editId).update(payload);
+    else await db.collection('team_members').add({...payload,created_at:nowTimestamp()});
+    showToast('Membro salvo!','success'); closeMemberModal(); loadMembers();
+  } catch { showToast('Erro ao salvar.','error'); }
+  btn.textContent='Salvar'; btn.disabled=false;
 });
 
 // ── Users ──
 async function loadUsers() {
-  const { data } = await sb.from('user_profiles').select('*').order('created_at');
+  const snap = await db.collection('user_profiles').orderBy('created_at').get();
   const el = document.getElementById('usersList');
-  if (!data || data.length === 0) {
-    el.innerHTML = '<div class="empty-state"><div class="empty-state-icon">👤</div><p>Nenhum usuário cadastrado</p></div>';
-    return;
-  }
-  el.innerHTML = data.map(u => `
+  if(snap.empty){el.innerHTML='<div class="empty-state"><div class="empty-state-icon">👤</div><p>Nenhum usuário cadastrado</p></div>';return;}
+  el.innerHTML=snap.docs.map(d=>{const u={id:d.id,...d.data()};return `
     <div class="user-row">
-      <div class="user-avatar" style="background:${u.role === 'master' ? 'var(--primary)' : 'var(--secondary)'}">
-        ${u.name.charAt(0).toUpperCase()}
+      <div class="user-avatar" style="background:${u.role==='master'?'var(--primary)':'var(--secondary)'}">${u.name.charAt(0).toUpperCase()}</div>
+      <div style="flex:1">
+        <div style="font-weight:600">${u.name}</div>
+        <div style="font-size:.82rem;color:var(--text-soft)">@${u.username} · ${u.role==='master'?'⭐ Administrador':'Profissional'}${u.area?' · '+(u.area==='coelho'?'🐇 Coelho':'🌆 Savassi'):''}</div>
       </div>
-      <div style="flex:1;">
-        <div style="font-weight:600;">${u.name}</div>
-        <div style="font-size:0.82rem;color:var(--text-soft);">@${u.username} · ${u.role === 'master' ? '⭐ Administrador' : 'Profissional'}${u.area ? ' · ' + (u.area === 'coelho' ? '🐇 Coelho' : '🌆 Savassi') : ''}</div>
-      </div>
-      ${u.id !== user.id ? `<button onclick="deleteUser('${u.id}')" class="btn btn-ghost btn-sm" style="color:var(--danger);">🗑 Remover</button>` : '<span class="badge badge-done">Você</span>'}
-    </div>`).join('');
+      ${u.id!==user.id?`<button onclick="deleteUser('${u.id}')" class="btn btn-ghost btn-sm" style="color:var(--danger)">🗑 Remover</button>`:'<span class="badge badge-done">Você</span>'}
+    </div>`;}).join('');
 }
 
 function openUserModal() {
-  document.getElementById('userForm').reset();
-  document.getElementById('userFormError').style.display = 'none';
+  document.getElementById('userForm').reset(); document.getElementById('userFormError').style.display='none';
   document.getElementById('userModal').classList.add('open');
 }
 function closeUserModal() { document.getElementById('userModal').classList.remove('open'); }
 
 async function deleteUser(id) {
-  if (!confirm('Remover este usuário?')) return;
-  await sb.from('user_profiles').delete().eq('id', id);
-  showToast('Usuário removido do perfil.', 'info');
-  loadUsers();
+  if(!confirm('Remover este usuário do sistema?')) return;
+  await db.collection('user_profiles').doc(id).delete();
+  showToast('Usuário removido.','info'); loadUsers();
 }
 
 document.getElementById('userForm').addEventListener('submit', async e => {
   e.preventDefault();
-  const btn = document.getElementById('saveUserBtn');
-  const errEl = document.getElementById('userFormError');
-  errEl.style.display = 'none';
-  btn.textContent = 'Criando…'; btn.disabled = true;
+  const btn=document.getElementById('saveUserBtn');
+  const errEl=document.getElementById('userFormError');
+  errEl.style.display='none'; btn.textContent='Criando…'; btn.disabled=true;
 
   const name     = document.getElementById('fUserName').value.trim();
   const username = document.getElementById('fUserUsername').value.trim().toLowerCase();
   const password = document.getElementById('fUserPassword').value;
-  const area     = document.getElementById('fUserArea').value || null;
+  const area     = document.getElementById('fUserArea').value||null;
   const role     = document.getElementById('fUserRole').value;
   const email    = `${username}@aquarela.app`;
 
-  // Check if username exists
-  const { data: existing } = await sb.from('user_profiles').select('id').eq('username', username).single();
-  if (existing) {
-    errEl.textContent = 'Este nome de usuário já está em uso.';
-    errEl.style.display = 'block';
-    btn.textContent = 'Criar Usuário'; btn.disabled = false;
-    return;
+  // Verificar se username já existe
+  const existing = await db.collection('user_profiles').where('username','==',username).get();
+  if(!existing.empty) {
+    errEl.textContent='Este nome de usuário já está em uso.'; errEl.style.display='block';
+    btn.textContent='Criar Usuário'; btn.disabled=false; return;
   }
 
-  // Create auth user
-  const { data: authData, error: authErr } = await sb.auth.signUp({ email, password });
-  if (authErr) {
-    errEl.textContent = `Erro: ${authErr.message}`;
-    errEl.style.display = 'block';
-    btn.textContent = 'Criar Usuário'; btn.disabled = false;
-    return;
+  // Criar usuário no Firebase Auth usando instância secundária
+  let secondaryApp;
+  try {
+    secondaryApp = firebase.initializeApp(firebaseConfig, `create-${Date.now()}`);
+    const cred = await secondaryApp.auth().createUserWithEmailAndPassword(email, password);
+    const newUid = cred.user.uid;
+
+    await db.collection('user_profiles').doc(newUid).set({
+      username, name, role, area: area||null,
+      created_at: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    await secondaryApp.auth().signOut();
+    showToast(`Usuário @${username} criado!`, 'success');
+    closeUserModal(); loadUsers();
+  } catch(err) {
+    errEl.textContent = `Erro: ${err.message}`; errEl.style.display='block';
+  } finally {
+    if(secondaryApp) secondaryApp.delete();
+    btn.textContent='Criar Usuário'; btn.disabled=false;
   }
-
-  // Insert profile
-  const { error: profileErr } = await sb.from('user_profiles').insert({
-    id: authData.user.id,
-    username, name, role, area
-  });
-
-  if (profileErr) {
-    errEl.textContent = `Erro ao criar perfil: ${profileErr.message}`;
-    errEl.style.display = 'block';
-  } else {
-    showToast(`Usuário @${username} criado com sucesso!`, 'success');
-    closeUserModal();
-    loadUsers();
-  }
-
-  btn.textContent = 'Criar Usuário'; btn.disabled = false;
 });
 
 function openSidebar()  { document.getElementById('sidebar').classList.add('open'); document.getElementById('sidebarOverlay').classList.add('open'); }

@@ -1,7 +1,13 @@
 // ============================================================
-//  CONFIGURAÇÃO SUPABASE — Equipe Aquarela
-//  Preencha com suas credenciais do painel Supabase:
-//  https://supabase.com/dashboard → Settings → API
+//  CONFIGURAÇÃO FIREBASE — Equipe Aquarela
+//  Preencha com as credenciais do seu projeto Firebase:
+//  https://console.firebase.google.com → seu projeto → ⚙️ Configurações
 // ============================================================
-const SUPABASE_URL = 'https://SEU_PROJETO.supabase.co';
-const SUPABASE_ANON_KEY = 'SUA_CHAVE_ANON_KEY';
+const firebaseConfig = {
+  apiKey:            "SUA_API_KEY",
+  authDomain:        "SEU_PROJETO.firebaseapp.com",
+  projectId:         "SEU_PROJETO_ID",
+  storageBucket:     "SEU_PROJETO.appspot.com",
+  messagingSenderId: "SEU_SENDER_ID",
+  appId:             "SEU_APP_ID"
+};

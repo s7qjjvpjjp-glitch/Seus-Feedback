@@ -1,104 +1,141 @@
-# Configuração do Site — Equipe Aquarela
+# Configuração do Site — Equipe Aquarela (Firebase)
 
-## Passo a Passo para Funcionar
-
-### 1. Criar conta no Supabase (gratuito)
-
-1. Acesse **https://supabase.com** e crie uma conta gratuita
-2. Clique em **"New project"**
-3. Dê um nome (ex: `equipe-aquarela`) e defina uma senha forte para o banco
-4. Escolha a região **South America (São Paulo)**
-5. Aguarde ~2 minutos para o projeto ser criado
+## Passo a Passo (gratuito, ~15 minutos)
 
 ---
 
-### 2. Criar o banco de dados
+### 1. Criar projeto no Firebase
 
-1. No painel do seu projeto, clique em **"SQL Editor"** (menu à esquerda)
-2. Clique em **"New query"**
-3. Copie todo o conteúdo do arquivo `supabase-schema.sql` e cole no editor
-4. Clique em **"Run"** (ou Ctrl+Enter)
-5. Deve aparecer "Success" — o banco está pronto!
-
----
-
-### 3. Desabilitar confirmação de e-mail (importante)
-
-1. Vá em **Authentication → Providers → Email**
-2. Desative a opção **"Confirm email"**
-3. Salve — isso permite criar usuários sem precisar confirmar e-mail
+1. Acesse **https://console.firebase.google.com**
+2. Clique em **"Adicionar projeto"**
+3. Dê um nome (ex: `equipe-aquarela`)
+4. Desative o Google Analytics (opcional) → clique em **"Criar projeto"**
+5. Aguarde e clique em **"Continuar"**
 
 ---
 
-### 4. Criar o usuário master (alvarochui)
+### 2. Ativar o banco de dados Firestore
 
-1. Vá em **Authentication → Users**
-2. Clique em **"Add user" → "Create new user"**
-3. Preencha:
-   - **Email:** `alvarochui@aquarela.app`
-   - **Password:** `alvarochui`
-4. Clique em **"Create user"** — anote o **UUID** gerado (aparece na lista)
-5. Agora vá em **SQL Editor** e execute:
+1. No menu lateral, clique em **"Firestore Database"**
+2. Clique em **"Criar banco de dados"**
+3. Escolha **"Iniciar no modo de produção"** → Avançar
+4. Escolha a região **southamerica-east1 (São Paulo)** → **"Ativar"**
 
-```sql
-insert into user_profiles (id, username, name, role)
-values ('<COLE_O_UUID_AQUI>', 'alvarochui', 'Alvaro', 'master');
+---
+
+### 3. Configurar as regras do Firestore
+
+1. Em Firestore, clique na aba **"Regras"**
+2. Substitua o conteúdo pelas regras abaixo e clique em **"Publicar"**:
+
+```
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Equipe: leitura pública, escrita só para autenticados
+    match /team_members/{doc} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+    // Demais coleções: só usuários autenticados
+    match /{collection}/{doc} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}
 ```
 
-Substitua `<COLE_O_UUID_AQUI>` pelo UUID copiado no passo anterior.
+---
+
+### 4. Ativar o Login com E-mail/Senha
+
+1. No menu lateral, clique em **"Authentication"**
+2. Clique em **"Começar"**
+3. Clique em **"E-mail/senha"**
+4. Ative o primeiro switch (**E-mail/senha**) → **"Salvar"**
 
 ---
 
-### 5. Pegar as credenciais do projeto
+### 5. Criar o usuário master (alvarochui)
 
-1. Vá em **Settings → API**
-2. Copie:
-   - **Project URL** (ex: `https://abcxyz123.supabase.co`)
-   - **anon public** key (chave longa que começa com `eyJ...`)
+1. Ainda em Authentication, clique na aba **"Usuários"**
+2. Clique em **"Adicionar usuário"**
+3. Preencha:
+   - **E-mail:** `alvarochui@aquarela.app`
+   - **Senha:** `alvarochui`
+4. Clique em **"Adicionar usuário"**
+5. **Copie o UID** do usuário criado (aparece na lista)
 
 ---
 
-### 6. Configurar o site
+### 6. Criar o perfil do usuário master no Firestore
 
-Abra o arquivo `js/config.js` e substitua os valores:
+1. Vá em **Firestore Database → Dados**
+2. Clique em **"Iniciar coleção"**
+3. **ID da coleção:** `user_profiles`
+4. **ID do documento:** cole o UID copiado acima
+5. Adicione os campos:
+
+| Campo | Tipo | Valor |
+|---|---|---|
+| `username` | string | `alvarochui` |
+| `name` | string | `Alvaro` (ou o nome real) |
+| `role` | string | `master` |
+| `area` | string | *(deixe em branco ou coloque null)* |
+
+6. Clique em **"Salvar"**
+
+---
+
+### 7. Pegar as credenciais do projeto
+
+1. Clique na engrenagem ⚙️ → **"Configurações do projeto"**
+2. Role até **"Seus aplicativos"** → Clique em **"</> Web"**
+3. Dê um apelido (ex: `aquarela-web`) → **"Registrar aplicativo"**
+4. O Firebase vai mostrar um código assim:
 
 ```javascript
-const SUPABASE_URL = 'https://SEU_PROJETO.supabase.co';  // ← Cole aqui
-const SUPABASE_ANON_KEY = 'SUA_CHAVE_ANON_KEY';          // ← Cole aqui
+const firebaseConfig = {
+  apiKey: "AIzaSy...",
+  authDomain: "equipe-aquarela.firebaseapp.com",
+  projectId: "equipe-aquarela",
+  storageBucket: "equipe-aquarela.appspot.com",
+  messagingSenderId: "123456789",
+  appId: "1:123456789:web:abc123"
+};
 ```
 
 ---
 
-### 7. Publicar o site
+### 8. Configurar o site
 
-Você pode publicar de forma gratuita no **Netlify** ou **GitHub Pages**:
+Abra o arquivo **`js/config.js`** e substitua com seus valores:
 
-**Netlify (recomendado):**
-1. Acesse **https://netlify.com**
-2. Arraste a pasta do projeto para o painel do Netlify
-3. Seu site estará no ar em segundos!
+```javascript
+const firebaseConfig = {
+  apiKey:            "SUA_API_KEY",
+  authDomain:        "SEU_PROJETO.firebaseapp.com",
+  projectId:         "SEU_PROJETO_ID",
+  storageBucket:     "SEU_PROJETO.appspot.com",
+  messagingSenderId: "SEU_SENDER_ID",
+  appId:             "SEU_APP_ID"
+};
+```
+
+---
+
+### 9. Publicar o site (opcional — Netlify, gratuito)
+
+1. Acesse **https://app.netlify.com**
+2. Arraste a pasta do projeto para o painel → pronto!
 
 ---
 
 ## Uso do Sistema
 
-### Login
-- Acesse `/login.html`
-- Usuário: `alvarochui`
-- Senha: `alvarochui`
-
-### Adicionar profissionais
-- Faça login como administrador
-- Vá em **Administração → Usuários do Sistema**
-- Clique em **"+ Adicionar Usuário"**
-- O novo usuário poderá fazer login imediatamente
-
-### Adicionar membros à página pública
-- Vá em **Administração → Equipe (Site Público)**
-- Adicione nome, cargo, descrição e (opcional) URL da foto
-- As informações aparecem automaticamente na página inicial
-
----
+- **Login:** `alvarochui` / `alvarochui`
+- **Adicionar profissionais:** Administração → Usuários do Sistema → + Adicionar Usuário
+- **Adicionar membros à página pública:** Administração → Equipe → + Adicionar Membro
 
 ## Estrutura do Site
 
