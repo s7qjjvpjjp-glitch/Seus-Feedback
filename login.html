@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Login — Equipe Aquarela</title>
+<link rel="stylesheet" href="css/aquarela.css"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<style>
+body {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--gradient-hero);
+  padding: 24px;
+  position: relative;
+  overflow: hidden;
+}
+.login-blob {
+  position: fixed; top: -150px; right: -150px;
+  width: 500px; height: 500px; opacity: 0.2;
+  background: radial-gradient(ellipse, #B08D6A, #F0E6DC, transparent 70%);
+  border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+  animation: blobAnim 12s ease-in-out infinite;
+}
+.login-blob2 {
+  position: fixed; bottom: -100px; left: -100px;
+  width: 350px; height: 350px; opacity: 0.15;
+  background: radial-gradient(ellipse, #9E7E6F, #EDE5DC, transparent 70%);
+  border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
+  animation: blobAnim 16s ease-in-out infinite reverse;
+}
+@keyframes blobAnim {
+  0%, 100% { border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; }
+  50%       { border-radius: 30% 60% 70% 40% / 50% 60% 30% 60%; }
+}
+.login-wrap {
+  display: flex;
+  max-width: 900px;
+  width: 100%;
+  background: var(--bg-card);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  position: relative;
+  z-index: 1;
+}
+.login-aside {
+  flex: 1;
+  background: linear-gradient(160deg, var(--primary) 0%, var(--primary-dark) 100%);
+  padding: 56px 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 520px;
+}
+.login-aside-blob {
+  position: absolute;
+  top: 20%; left: 30%;
+  width: 200px; height: 200px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 60% 40% 30% 70% / 50% 60% 40% 50%;
+  animation: blobAnim 10s ease-in-out infinite;
+}
+.login-aside h2 {
+  color: #fff; font-size: 1.8rem; position: relative; z-index: 1;
+}
+.login-aside p {
+  color: rgba(255,255,255,0.75); font-size: 0.95rem; margin-top: 12px;
+  position: relative; z-index: 1;
+}
+.login-aside-footer {
+  position: relative; z-index: 1;
+}
+.login-aside-footer a {
+  color: rgba(255,255,255,0.6); font-size: 0.85rem;
+}
+.login-aside-footer a:hover { color: #fff; }
+.login-form-wrap {
+  flex: 1; padding: 56px 48px; display: flex; flex-direction: column; justify-content: center;
+}
+.login-logo { display: flex; align-items: center; gap: 10px; margin-bottom: 36px; }
+.login-logo img { height: 44px; }
+.login-title {
+  font-family: var(--font-heading); font-size: 1.7rem; margin-bottom: 6px;
+}
+.login-sub { color: var(--text-soft); font-size: 0.92rem; margin-bottom: 32px; }
+.input-with-icon { position: relative; }
+.input-with-icon .form-input { padding-left: 44px; }
+.input-icon {
+  position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+  font-size: 1rem; color: var(--text-soft); pointer-events: none;
+}
+.login-error {
+  background: #FFEBEE; border: 1px solid #FFCDD2;
+  border-radius: var(--radius-sm); padding: 12px 16px;
+  color: var(--danger); font-size: 0.88rem;
+  margin-bottom: 20px; display: none;
+}
+.back-link {
+  display: inline-flex; align-items: center; gap: 6px;
+  color: var(--text-soft); font-size: 0.85rem; margin-top: 24px;
+}
+.back-link:hover { color: var(--primary); }
+
+@media (max-width: 680px) {
+  .login-wrap { flex-direction: column; max-width: 420px; }
+  .login-aside { display: none; }
+  .login-form-wrap { padding: 36px 28px; }
+}
+</style>
+</head>
+<body>
+
+<div class="login-blob"></div>
+<div class="login-blob2"></div>
+
+<div class="login-wrap">
+  <!-- Aside -->
+  <div class="login-aside" style="position:relative;">
+    <div class="login-aside-blob"></div>
+    <div>
+      <h2>Bem-vindo à<br/>Equipe Aquarela</h2>
+      <p>Acesse o painel interno para gerenciar visitas, metas e agenda da equipe.</p>
+    </div>
+    <div class="login-aside-footer">
+      <a href="index.html">← Voltar ao site</a>
+    </div>
+  </div>
+
+  <!-- Form -->
+  <div class="login-form-wrap">
+    <div class="login-logo">
+      <img src="assets/logo-aquarela.svg" alt="Equipe Aquarela"/>
+    </div>
+    <div class="login-title">Entrar</div>
+    <div class="login-sub">Use suas credenciais da equipe</div>
+
+    <div class="login-error" id="loginError"></div>
+
+    <form id="loginForm">
+      <div class="form-group">
+        <label class="form-label" for="username">Usuário</label>
+        <div class="input-with-icon">
+          <span class="input-icon">👤</span>
+          <input type="text" id="username" class="form-input"
+            placeholder="Digite seu usuário" autocomplete="username" required/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="password">Senha</label>
+        <div class="input-with-icon">
+          <span class="input-icon">🔒</span>
+          <input type="password" id="password" class="form-input"
+            placeholder="Digite sua senha" autocomplete="current-password" required/>
+          <button type="button" id="togglePwd" onclick="togglePassword()"
+            style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-soft);font-size:1rem;">
+            👁
+          </button>
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary btn-full btn-lg" id="loginBtn">
+        Entrar
+      </button>
+    </form>
+
+    <a href="index.html" class="back-link">← Voltar ao site público</a>
+  </div>
+</div>
+
+<script>
+// Redireciona se já logado
+const existing = localStorage.getItem('aquarela_session');
+if (existing) {
+  try {
+    const u = JSON.parse(existing);
+    if (u && u.id) window.location.href = 'dashboard.html';
+  } catch {}
+}
+
+function togglePassword() {
+  const pwd = document.getElementById('password');
+  pwd.type = pwd.type === 'password' ? 'text' : 'password';
+}
+
+document.getElementById('loginForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const btn = document.getElementById('loginBtn');
+  const errEl = document.getElementById('loginError');
+  errEl.style.display = 'none';
+
+  const username = document.getElementById('username').value.trim();
+  const password = document.getElementById('password').value;
+
+  if (!username || !password) {
+    errEl.textContent = 'Preencha usuário e senha.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  btn.textContent = 'Entrando...';
+  btn.disabled = true;
+
+  try {
+    await login(username, password);
+    window.location.href = 'dashboard.html';
+  } catch (err) {
+    errEl.textContent = err.message || 'Usuário ou senha inválidos.';
+    errEl.style.display = 'block';
+    btn.textContent = 'Entrar';
+    btn.disabled = false;
+  }
+});
+</script>
+</body>
+</html>

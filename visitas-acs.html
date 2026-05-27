@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Visitas ACS — Equipe Aquarela</title>
+<link rel="stylesheet" href="css/aquarela.css"/>
+<link rel="stylesheet" href="css/dashboard.css"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+</head>
+<body>
+<div class="app-layout">
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-text">Aquarela</div>
+      <div class="sidebar-logo-sub">Equipe de Saúde</div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="sidebar-section-label">Principal</div>
+      <a href="dashboard.html" class="nav-item"><span class="nav-icon">🏠</span> Dashboard</a>
+      <a href="visitas-domiciliares.html" class="nav-item"><span class="nav-icon">🏡</span> Visitas Domiciliares</a>
+      <a href="visitas-acs.html" class="nav-item active"><span class="nav-icon">📊</span> Área de Visitas ACS</a>
+      <a href="metas.html" class="nav-item"><span class="nav-icon">🎯</span> Metas</a>
+      <a href="agenda.html" class="nav-item"><span class="nav-icon">📅</span> Agenda</a>
+      <div class="sidebar-section-label" data-master-only>Administração</div>
+      <a href="admin.html" class="nav-item" data-master-only><span class="nav-icon">⚙️</span> Administração</a>
+    </nav>
+    <div class="sidebar-user">
+      <div class="user-avatar" data-user-initial>A</div>
+      <div class="user-info">
+        <div class="user-name" data-user-name>Usuário</div>
+        <div class="user-role" data-user-role>Profissional</div>
+      </div>
+      <button class="btn-logout" onclick="logout()">↩</button>
+    </div>
+  </aside>
+  <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+  <div class="main-content">
+    <header class="topbar">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <button class="topbar-hamburger" onclick="openSidebar()">☰</button>
+        <div class="topbar-title">Área de Visitas ACS</div>
+      </div>
+      <div class="topbar-actions">
+        <button class="btn btn-primary btn-sm" onclick="openModal()">+ Registrar Visita</button>
+      </div>
+    </header>
+
+    <div class="page-body">
+      <div class="page-header">
+        <h1>Área de Visitas ACS</h1>
+        <p>Acompanhamento estratificado por área — Coelho e Savassi</p>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-grid" style="margin-bottom:24px;">
+        <div class="stat-card">
+          <div class="stat-icon stat-icon-gold">📊</div>
+          <div class="stat-value" id="statTotal">-</div>
+          <div class="stat-label">Total de Visitas</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon stat-icon-blue">🐇</div>
+          <div class="stat-value" id="statCoelho">-</div>
+          <div class="stat-label">Área Coelho</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon stat-icon-rose">🌆</div>
+          <div class="stat-value" id="statSavassi">-</div>
+          <div class="stat-label">Área Savassi</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon stat-icon-green">📆</div>
+          <div class="stat-value" id="statMes">-</div>
+          <div class="stat-label">Visitas Este Mês</div>
+        </div>
+      </div>
+
+      <!-- Charts Row -->
+      <div class="content-grid" style="margin-bottom:24px;">
+        <div class="section-card">
+          <div class="section-card-header">
+            <div class="section-card-title">📊 Visitas por Mês</div>
+          </div>
+          <div class="section-card-body">
+            <div class="chart-container">
+              <canvas id="chartBar"></canvas>
+            </div>
+          </div>
+        </div>
+        <div class="section-card">
+          <div class="section-card-header">
+            <div class="section-card-title">🥧 Distribuição por Área</div>
+          </div>
+          <div class="section-card-body">
+            <div class="chart-container">
+              <canvas id="chartPie"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Area Tabs + Table -->
+      <div class="section-card">
+        <div class="section-card-header">
+          <div class="section-card-title">📋 Registros</div>
+          <select class="form-select" id="filterYear" style="width:auto;" onchange="loadTable()">
+          </select>
+        </div>
+        <div class="section-card-body">
+          <div class="area-tabs">
+            <button class="area-tab active" onclick="setArea('all', this)">Todas</button>
+            <button class="area-tab" onclick="setArea('coelho', this)">🐇 Coelho</button>
+            <button class="area-tab" onclick="setArea('savassi', this)">🌆 Savassi</button>
+          </div>
+          <div id="acsTable"><div class="spinner"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="acsModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Registrar Visita ACS</h3>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <form id="acsForm">
+      <input type="hidden" id="editId"/>
+      <div class="form-group">
+        <label class="form-label">Nome do ACS *</label>
+        <input type="text" id="fAcsName" class="form-input" placeholder="Nome do agente" required/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Área *</label>
+        <select id="fArea" class="form-select" required>
+          <option value="">Selecione…</option>
+          <option value="coelho">🐇 Coelho</option>
+          <option value="savassi">🌆 Savassi</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Data da Visita *</label>
+        <input type="date" id="fDate" class="form-input" required/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Número de Visitas</label>
+        <input type="number" id="fCount" class="form-input" value="1" min="1"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Observações</label>
+        <textarea id="fObs" class="form-textarea" placeholder="Observações sobre as visitas…"></textarea>
+      </div>
+      <div style="display:flex;gap:12px;margin-top:8px;">
+        <button type="button" class="btn btn-ghost btn-full" onclick="closeModal()">Cancelar</button>
+        <button type="submit" class="btn btn-primary btn-full" id="saveBtn">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+const user = requireAuth();
+populateUserUI();
+
+const sb = getSupabase();
+let currentArea = 'all';
+let allData = [];
+
+document.getElementById('fDate').valueAsDate = new Date();
+
+function setArea(area, btn) {
+  currentArea = area;
+  document.querySelectorAll('.area-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderTable();
+}
+
+async function loadAll() {
+  const year = document.getElementById('filterYear').value || new Date().getFullYear();
+  const { data, error } = await sb
+    .from('visitas_acs')
+    .select('*')
+    .gte('visit_date', `${year}-01-01`)
+    .lte('visit_date', `${year}-12-31`)
+    .order('visit_date', { ascending: false });
+
+  if (error) { showToast('Erro ao carregar dados.', 'error'); return; }
+  allData = data || [];
+
+  const total = allData.reduce((s, v) => s + v.visit_count, 0);
+  const coelho = allData.filter(v => v.area === 'coelho').reduce((s, v) => s + v.visit_count, 0);
+  const savassi = allData.filter(v => v.area === 'savassi').reduce((s, v) => s + v.visit_count, 0);
+  const monthStr = new Date().toISOString().slice(0, 7);
+  const mes = allData.filter(v => v.visit_date.startsWith(monthStr)).reduce((s, v) => s + v.visit_count, 0);
+
+  document.getElementById('statTotal').textContent = total;
+  document.getElementById('statCoelho').textContent = coelho;
+  document.getElementById('statSavassi').textContent = savassi;
+  document.getElementById('statMes').textContent = mes;
+
+  renderCharts(year, allData);
+  renderTable();
+}
+
+function renderTable() {
+  const filtered = currentArea === 'all' ? allData : allData.filter(v => v.area === currentArea);
+  const el = document.getElementById('acsTable');
+
+  if (filtered.length === 0) {
+    el.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📋</div><p>Nenhum registro encontrado</p></div>';
+    return;
+  }
+
+  el.innerHTML = `<div class="table-wrap"><table>
+    <thead><tr><th>ACS</th><th>Área</th><th>Data</th><th>Visitas</th><th>Observações</th><th>Ações</th></tr></thead>
+    <tbody>${filtered.map(v => `
+      <tr>
+        <td style="font-weight:600;">${v.acs_name}</td>
+        <td><span class="badge ${v.area === 'coelho' ? 'badge-medium' : 'badge-low'}">${v.area === 'coelho' ? '🐇 Coelho' : '🌆 Savassi'}</span></td>
+        <td>${formatDate(v.visit_date)}</td>
+        <td><strong>${v.visit_count}</strong></td>
+        <td style="font-size:0.85rem;color:var(--text-soft);max-width:180px;">${v.observations || '—'}</td>
+        <td>
+          <button onclick="editItem(${JSON.stringify(v).replace(/"/g,'&quot;')})" class="btn btn-ghost btn-sm">✏️</button>
+          <button onclick="deleteItem('${v.id}')" class="btn btn-ghost btn-sm" style="color:var(--danger);">🗑</button>
+        </td>
+      </tr>`).join('')}
+    </tbody>
+  </table></div>`;
+}
+
+function renderCharts(year, data) {
+  const months = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const coelhoByMonth = Array(12).fill(0);
+  const savassiByMonth = Array(12).fill(0);
+
+  data.forEach(v => {
+    const m = parseInt(v.visit_date.slice(5,7)) - 1;
+    if (v.area === 'coelho') coelhoByMonth[m] += v.visit_count;
+    else savassiByMonth[m] += v.visit_count;
+  });
+
+  const existingBar = Chart.getChart('chartBar');
+  if (existingBar) existingBar.destroy();
+  new Chart(document.getElementById('chartBar'), {
+    type: 'bar',
+    data: {
+      labels: months,
+      datasets: [
+        { label: 'Coelho', data: coelhoByMonth, backgroundColor: '#B08D6A', borderRadius: 6 },
+        { label: 'Savassi', data: savassiByMonth, backgroundColor: '#9E7E6F', borderRadius: 6 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom' } },
+      scales: { x: { grid: { display: false } }, y: { beginAtZero: true } }
+    }
+  });
+
+  const coelhoTotal = data.filter(v => v.area === 'coelho').reduce((s, v) => s + v.visit_count, 0);
+  const savassiTotal = data.filter(v => v.area === 'savassi').reduce((s, v) => s + v.visit_count, 0);
+  const existingPie = Chart.getChart('chartPie');
+  if (existingPie) existingPie.destroy();
+  new Chart(document.getElementById('chartPie'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Coelho', 'Savassi'],
+      datasets: [{ data: [coelhoTotal, savassiTotal], backgroundColor: ['#B08D6A', '#9E7E6F'], borderColor: '#fff', borderWidth: 4 }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom' } }
+    }
+  });
+}
+
+// Populate year selector
+function setupYearFilter() {
+  const sel = document.getElementById('filterYear');
+  const currentYear = new Date().getFullYear();
+  for (let y = currentYear; y >= currentYear - 3; y--) {
+    const opt = document.createElement('option');
+    opt.value = y; opt.textContent = y;
+    sel.appendChild(opt);
+  }
+}
+
+function openModal() {
+  document.getElementById('editId').value = '';
+  document.getElementById('acsForm').reset();
+  document.getElementById('fDate').valueAsDate = new Date();
+  document.getElementById('fCount').value = 1;
+  document.getElementById('acsModal').classList.add('open');
+}
+function closeModal() { document.getElementById('acsModal').classList.remove('open'); }
+
+function editItem(v) {
+  document.getElementById('editId').value = v.id;
+  document.getElementById('fAcsName').value = v.acs_name;
+  document.getElementById('fArea').value = v.area;
+  document.getElementById('fDate').value = v.visit_date;
+  document.getElementById('fCount').value = v.visit_count;
+  document.getElementById('fObs').value = v.observations || '';
+  document.getElementById('acsModal').classList.add('open');
+}
+
+async function deleteItem(id) {
+  if (!confirm('Excluir este registro?')) return;
+  const { error } = await sb.from('visitas_acs').delete().eq('id', id);
+  if (error) { showToast('Erro ao excluir.', 'error'); return; }
+  showToast('Registro excluído.', 'info');
+  loadAll();
+}
+
+document.getElementById('acsForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const btn = document.getElementById('saveBtn');
+  btn.textContent = 'Salvando…'; btn.disabled = true;
+  const editId = document.getElementById('editId').value;
+  const payload = {
+    acs_name:     document.getElementById('fAcsName').value.trim(),
+    area:         document.getElementById('fArea').value,
+    visit_date:   document.getElementById('fDate').value,
+    visit_count:  parseInt(document.getElementById('fCount').value) || 1,
+    observations: document.getElementById('fObs').value.trim(),
+    created_by:   user.id
+  };
+  const { error } = editId
+    ? await sb.from('visitas_acs').update(payload).eq('id', editId)
+    : await sb.from('visitas_acs').insert(payload);
+  if (error) { showToast('Erro ao salvar.', 'error'); }
+  else { showToast('Registro salvo!', 'success'); closeModal(); loadAll(); }
+  btn.textContent = 'Salvar'; btn.disabled = false;
+});
+
+function loadTable() { loadAll(); }
+function openSidebar()  { document.getElementById('sidebar').classList.add('open'); document.getElementById('sidebarOverlay').classList.add('open'); }
+function closeSidebar() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('sidebarOverlay').classList.remove('open'); }
+
+setupYearFilter();
+loadAll();
+</script>
+</body>
+</html>

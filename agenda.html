@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Agenda — Equipe Aquarela</title>
+<link rel="stylesheet" href="css/aquarela.css"/>
+<link rel="stylesheet" href="css/dashboard.css"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+</head>
+<body>
+<div class="app-layout">
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-text">Aquarela</div>
+      <div class="sidebar-logo-sub">Equipe de Saúde</div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="sidebar-section-label">Principal</div>
+      <a href="dashboard.html" class="nav-item"><span class="nav-icon">🏠</span> Dashboard</a>
+      <a href="visitas-domiciliares.html" class="nav-item"><span class="nav-icon">🏡</span> Visitas Domiciliares</a>
+      <a href="visitas-acs.html" class="nav-item"><span class="nav-icon">📊</span> Área de Visitas ACS</a>
+      <a href="metas.html" class="nav-item"><span class="nav-icon">🎯</span> Metas</a>
+      <a href="agenda.html" class="nav-item active"><span class="nav-icon">📅</span> Agenda</a>
+      <div class="sidebar-section-label" data-master-only>Administração</div>
+      <a href="admin.html" class="nav-item" data-master-only><span class="nav-icon">⚙️</span> Administração</a>
+    </nav>
+    <div class="sidebar-user">
+      <div class="user-avatar" data-user-initial>A</div>
+      <div class="user-info">
+        <div class="user-name" data-user-name>Usuário</div>
+        <div class="user-role" data-user-role>Profissional</div>
+      </div>
+      <button class="btn-logout" onclick="logout()">↩</button>
+    </div>
+  </aside>
+  <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+  <div class="main-content">
+    <header class="topbar">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <button class="topbar-hamburger" onclick="openSidebar()">☰</button>
+        <div class="topbar-title">Agenda</div>
+      </div>
+      <div class="topbar-actions">
+        <button class="btn btn-primary btn-sm" onclick="openEventModal()">+ Novo Evento</button>
+      </div>
+    </header>
+
+    <div class="page-body">
+      <div class="page-header">
+        <h1>Agenda da Equipe</h1>
+        <p>Gerencie compromissos, reuniões e eventos</p>
+      </div>
+
+      <div class="content-grid sidebar-layout">
+        <!-- Calendar -->
+        <div class="section-card">
+          <div class="section-card-body">
+            <div class="cal-nav">
+              <button class="cal-nav-btn" onclick="changeMonth(-1)">‹</button>
+              <div class="cal-month-title" id="calTitle"></div>
+              <button class="cal-nav-btn" onclick="changeMonth(1)">›</button>
+              <button class="btn btn-ghost btn-sm" onclick="goToday()">Hoje</button>
+            </div>
+            <div class="calendar-grid" id="calDayLabels">
+              <div class="cal-day-label">Dom</div>
+              <div class="cal-day-label">Seg</div>
+              <div class="cal-day-label">Ter</div>
+              <div class="cal-day-label">Qua</div>
+              <div class="cal-day-label">Qui</div>
+              <div class="cal-day-label">Sex</div>
+              <div class="cal-day-label">Sáb</div>
+            </div>
+            <div class="calendar-grid" id="calCells"></div>
+          </div>
+        </div>
+
+        <!-- Sidebar: upcoming events -->
+        <div>
+          <!-- Proximos -->
+          <div class="section-card" style="margin-bottom:20px;">
+            <div class="section-card-header">
+              <div class="section-card-title">🔜 Próximos Eventos</div>
+            </div>
+            <div class="section-card-body" id="upcomingList">
+              <div class="spinner"></div>
+            </div>
+          </div>
+
+          <!-- Selected day -->
+          <div class="section-card" id="selectedDayCard" style="display:none;">
+            <div class="section-card-header">
+              <div class="section-card-title" id="selectedDayTitle">Eventos do dia</div>
+              <button class="btn btn-ghost btn-sm" onclick="openEventModal()">+</button>
+            </div>
+            <div class="section-card-body" id="selectedDayEvents"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Evento -->
+<div class="modal-overlay" id="eventModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="eventModalTitle">Novo Evento</h3>
+      <button class="modal-close" onclick="closeEventModal()">✕</button>
+    </div>
+    <form id="eventForm">
+      <input type="hidden" id="editEventId"/>
+      <div class="form-group">
+        <label class="form-label">Título *</label>
+        <input type="text" id="fEvTitle" class="form-input" placeholder="Ex: Reunião de equipe" required/>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+        <div class="form-group">
+          <label class="form-label">Data *</label>
+          <input type="date" id="fEvDate" class="form-input" required/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Horário</label>
+          <input type="time" id="fEvTime" class="form-input"/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Tipo</label>
+        <select id="fEvType" class="form-select">
+          <option value="meeting">🤝 Reunião</option>
+          <option value="visit">🏡 Visita</option>
+          <option value="training">📚 Capacitação</option>
+          <option value="other">📌 Outro</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Descrição</label>
+        <textarea id="fEvDesc" class="form-textarea" placeholder="Detalhes do evento…"></textarea>
+      </div>
+      <div style="display:flex;gap:12px;margin-top:8px;">
+        <button type="button" class="btn btn-ghost btn-full" onclick="closeEventModal()">Cancelar</button>
+        <button type="submit" class="btn btn-primary btn-full" id="saveEvBtn">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+const user = requireAuth();
+populateUserUI();
+
+const sb = getSupabase();
+const today = new Date();
+let calYear = today.getFullYear();
+let calMonth = today.getMonth();
+let allEvents = [];
+const MONTHS = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const TYPE_ICONS = { meeting: '🤝', visit: '🏡', training: '📚', other: '📌' };
+
+function goToday() {
+  calYear = today.getFullYear();
+  calMonth = today.getMonth();
+  renderCal();
+}
+
+function changeMonth(dir) {
+  calMonth += dir;
+  if (calMonth < 0) { calMonth = 11; calYear--; }
+  if (calMonth > 11) { calMonth = 0; calYear++; }
+  renderCal();
+}
+
+async function loadEvents() {
+  const { data } = await sb
+    .from('eventos')
+    .select('*')
+    .gte('event_date', `${calYear}-01-01`)
+    .lte('event_date', `${calYear + 1}-12-31`)
+    .order('event_date').order('event_time');
+
+  allEvents = data || [];
+  renderCal();
+  renderUpcoming();
+}
+
+function renderCal() {
+  document.getElementById('calTitle').textContent = `${MONTHS[calMonth]} ${calYear}`;
+
+  const firstDay = new Date(calYear, calMonth, 1).getDay();
+  const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+  const daysInPrev  = new Date(calYear, calMonth, 0).getDate();
+  const todayStr = today.toISOString().split('T')[0];
+
+  const eventsByDay = {};
+  allEvents.forEach(ev => {
+    if (ev.event_date.startsWith(`${calYear}-${String(calMonth+1).padStart(2,'0')}`)) {
+      const d = parseInt(ev.event_date.slice(8,10));
+      if (!eventsByDay[d]) eventsByDay[d] = [];
+      eventsByDay[d].push(ev);
+    }
+  });
+
+  let html = '';
+  for (let i = 0; i < firstDay; i++) {
+    const d = daysInPrev - firstDay + i + 1;
+    html += `<div class="cal-cell other-month"><div class="cal-date">${d}</div></div>`;
+  }
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const isToday = dateStr === todayStr;
+    const evs = eventsByDay[d] || [];
+    html += `<div class="cal-cell${isToday ? ' today' : ''}" onclick="selectDay('${dateStr}')">
+      <div class="cal-date">${d}</div>
+      ${evs.slice(0,2).map(ev => `<span class="cal-event-dot">${TYPE_ICONS[ev.event_type] || '📌'} ${ev.title}</span>`).join('')}
+      ${evs.length > 2 ? `<span class="cal-event-dot">+${evs.length-2} mais</span>` : ''}
+    </div>`;
+  }
+
+  const remaining = (7 - ((firstDay + daysInMonth) % 7)) % 7;
+  for (let i = 1; i <= remaining; i++) {
+    html += `<div class="cal-cell other-month"><div class="cal-date">${i}</div></div>`;
+  }
+
+  document.getElementById('calCells').innerHTML = html;
+}
+
+function selectDay(dateStr) {
+  const evs = allEvents.filter(ev => ev.event_date === dateStr);
+  const card = document.getElementById('selectedDayCard');
+  const title = document.getElementById('selectedDayTitle');
+  const body = document.getElementById('selectedDayEvents');
+  const [y,m,d] = dateStr.split('-');
+  title.textContent = `${d}/${m}/${y}`;
+
+  if (evs.length === 0) {
+    body.innerHTML = '<div class="empty-state" style="padding:24px 0;"><div class="empty-state-icon">📅</div><p>Sem eventos neste dia</p></div>';
+  } else {
+    body.innerHTML = evs.map(ev => `
+      <div style="display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);">
+        <div style="font-size:1.3rem;">${TYPE_ICONS[ev.event_type] || '📌'}</div>
+        <div style="flex:1;">
+          <div style="font-weight:600;font-size:0.9rem;">${ev.title}</div>
+          ${ev.event_time ? `<div style="font-size:0.8rem;color:var(--text-soft);">${ev.event_time.slice(0,5)}</div>` : ''}
+          ${ev.description ? `<div style="font-size:0.82rem;color:var(--text-soft);margin-top:3px;">${ev.description}</div>` : ''}
+        </div>
+        <div style="display:flex;gap:4px;">
+          <button onclick="editEvent(${JSON.stringify(ev).replace(/"/g,'&quot;')})" class="btn btn-ghost btn-sm" style="padding:4px 8px;">✏️</button>
+          <button onclick="deleteEvent('${ev.id}')" class="btn btn-ghost btn-sm" style="padding:4px 8px;color:var(--danger);">🗑</button>
+        </div>
+      </div>`).join('');
+  }
+
+  // Pre-fill date for new event
+  document.getElementById('fEvDate').value = dateStr;
+  card.style.display = 'block';
+}
+
+function renderUpcoming() {
+  const todayStr = today.toISOString().split('T')[0];
+  const upcoming = allEvents.filter(ev => ev.event_date >= todayStr).slice(0, 8);
+  const el = document.getElementById('upcomingList');
+
+  if (upcoming.length === 0) {
+    el.innerHTML = '<div class="empty-state" style="padding:20px 0;"><div class="empty-state-icon">📅</div><p>Nenhum evento próximo</p></div>';
+    return;
+  }
+
+  el.innerHTML = upcoming.map(ev => `
+    <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);">
+      <div style="text-align:center;min-width:38px;">
+        <div style="font-size:0.75rem;font-weight:700;color:var(--primary);text-transform:uppercase;">${MONTHS[parseInt(ev.event_date.slice(5,7))-1].slice(0,3)}</div>
+        <div style="font-size:1.3rem;font-weight:700;line-height:1;">${ev.event_date.slice(8,10)}</div>
+      </div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-weight:600;font-size:0.88rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${TYPE_ICONS[ev.event_type]} ${ev.title}</div>
+        ${ev.event_time ? `<div style="font-size:0.78rem;color:var(--text-soft);">${ev.event_time.slice(0,5)}</div>` : ''}
+      </div>
+    </div>`).join('');
+}
+
+function openEventModal(date = null) {
+  document.getElementById('editEventId').value = '';
+  document.getElementById('eventModalTitle').textContent = 'Novo Evento';
+  document.getElementById('eventForm').reset();
+  document.getElementById('fEvDate').value = date || document.getElementById('fEvDate').value || today.toISOString().split('T')[0];
+  document.getElementById('eventModal').classList.add('open');
+}
+function closeEventModal() { document.getElementById('eventModal').classList.remove('open'); }
+
+function editEvent(ev) {
+  document.getElementById('editEventId').value = ev.id;
+  document.getElementById('eventModalTitle').textContent = 'Editar Evento';
+  document.getElementById('fEvTitle').value = ev.title;
+  document.getElementById('fEvDate').value = ev.event_date;
+  document.getElementById('fEvTime').value = ev.event_time ? ev.event_time.slice(0,5) : '';
+  document.getElementById('fEvType').value = ev.event_type;
+  document.getElementById('fEvDesc').value = ev.description || '';
+  document.getElementById('eventModal').classList.add('open');
+}
+
+async function deleteEvent(id) {
+  if (!confirm('Excluir este evento?')) return;
+  const { error } = await sb.from('eventos').delete().eq('id', id);
+  if (error) { showToast('Erro ao excluir.', 'error'); return; }
+  showToast('Evento excluído.', 'info');
+  loadEvents();
+}
+
+document.getElementById('eventForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const btn = document.getElementById('saveEvBtn');
+  btn.textContent = 'Salvando…'; btn.disabled = true;
+  const editId = document.getElementById('editEventId').value;
+  const payload = {
+    title:       document.getElementById('fEvTitle').value.trim(),
+    event_date:  document.getElementById('fEvDate').value,
+    event_time:  document.getElementById('fEvTime').value || null,
+    event_type:  document.getElementById('fEvType').value,
+    description: document.getElementById('fEvDesc').value.trim(),
+    created_by:  user.id
+  };
+  const { error } = editId
+    ? await sb.from('eventos').update(payload).eq('id', editId)
+    : await sb.from('eventos').insert(payload);
+  if (error) { showToast('Erro ao salvar.', 'error'); }
+  else { showToast('Evento salvo!', 'success'); closeEventModal(); loadEvents(); }
+  btn.textContent = 'Salvar'; btn.disabled = false;
+});
+
+function openSidebar()  { document.getElementById('sidebar').classList.add('open'); document.getElementById('sidebarOverlay').classList.add('open'); }
+function closeSidebar() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('sidebarOverlay').classList.remove('open'); }
+
+loadEvents();
+</script>
+</body>
+</html>
