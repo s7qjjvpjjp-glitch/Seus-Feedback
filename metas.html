@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Metas — Equipe Aquarela</title>
+<link rel="stylesheet" href="css/aquarela.css"/>
+<link rel="stylesheet" href="css/dashboard.css"/>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+</head>
+<body>
+<div class="app-layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo"><div class="sidebar-logo-text">Aquarela</div><div class="sidebar-logo-sub">Equipe de Saúde</div></div>
+    <nav class="sidebar-nav">
+      <div class="sidebar-section-label">Principal</div>
+      <a href="dashboard.html" class="nav-item"><span class="nav-icon">🏠</span> Dashboard</a>
+      <a href="visitas-domiciliares.html" class="nav-item"><span class="nav-icon">🏡</span> Visitas Domiciliares</a>
+      <a href="visitas-acs.html" class="nav-item"><span class="nav-icon">📊</span> Área de Visitas ACS</a>
+      <a href="metas.html" class="nav-item active"><span class="nav-icon">🎯</span> Metas</a>
+      <a href="agenda.html" class="nav-item"><span class="nav-icon">📅</span> Agenda</a>
+      <div class="sidebar-section-label" data-master-only>Administração</div>
+      <a href="admin.html" class="nav-item" data-master-only><span class="nav-icon">⚙️</span> Administração</a>
+    </nav>
+    <div class="sidebar-user">
+      <div class="user-avatar" data-user-initial>A</div>
+      <div class="user-info"><div class="user-name" data-user-name>Usuário</div><div class="user-role" data-user-role>Profissional</div></div>
+      <button class="btn-logout" onclick="logout()">↩</button>
+    </div>
+  </aside>
+  <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+  <div class="main-content">
+    <header class="topbar">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <button class="topbar-hamburger" onclick="openSidebar()">☰</button>
+        <div class="topbar-title">Metas da Equipe</div>
+      </div>
+      <div class="topbar-actions">
+        <button class="btn btn-primary btn-sm" id="btnNovaMeta" onclick="openMetaModal()">+ Nova Meta</button>
+      </div>
+    </header>
+
+    <div class="page-body">
+      <div class="page-header"><h1>Metas da Equipe</h1><p>Acompanhe o progresso e marque suas resoluções</p></div>
+
+      <div class="stats-grid" style="margin-bottom:24px;">
+        <div class="stat-card"><div class="stat-icon stat-icon-gold">🎯</div><div class="stat-value" id="statAtivas">-</div><div class="stat-label">Metas Ativas</div></div>
+        <div class="stat-card"><div class="stat-icon stat-icon-green">✅</div><div class="stat-value" id="statResolucoes">-</div><div class="stat-label">Total de Resoluções</div></div>
+        <div class="stat-card"><div class="stat-icon stat-icon-rose">🔥</div><div class="stat-value" id="statMinhas">-</div><div class="stat-label">Minhas Resoluções</div></div>
+      </div>
+
+      <div class="content-grid sidebar-layout">
+        <div>
+          <div class="section-card">
+            <div class="section-card-header">
+              <div class="section-card-title">📋 Metas</div>
+              <div style="display:flex;gap:8px;">
+                <button class="btn btn-ghost btn-sm" style="color:var(--primary)" onclick="setFilter('active',this)">Ativas</button>
+                <button class="btn btn-ghost btn-sm" onclick="setFilter('all',this)">Todas</button>
+              </div>
+            </div>
+            <div class="section-card-body" id="metasList"><div class="spinner"></div></div>
+          </div>
+        </div>
+        <div>
+          <div class="section-card">
+            <div class="section-card-header"><div class="section-card-title">📊 Resoluções por Profissional</div></div>
+            <div class="section-card-body"><div class="chart-container"><canvas id="chartMetas"></canvas></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Meta -->
+<div class="modal-overlay" id="metaModal">
+  <div class="modal">
+    <div class="modal-header"><h3 id="metaModalTitle">Nova Meta</h3><button class="modal-close" onclick="closeMetaModal()">✕</button></div>
+    <form id="metaForm">
+      <input type="hidden" id="editMetaId"/>
+      <div class="form-group"><label class="form-label">Título *</label><input type="text" id="fTitle" class="form-input" required/></div>
+      <div class="form-group"><label class="form-label">Descrição</label><textarea id="fDesc" class="form-textarea"></textarea></div>
+      <div class="form-group"><label class="form-label">Prazo</label><input type="date" id="fDeadline" class="form-input"/></div>
+      <div class="form-group"><label class="form-label">Prioridade</label>
+        <select id="fPriority" class="form-select">
+          <option value="low">🟢 Baixa</option><option value="medium" selected>🟡 Média</option><option value="high">🔴 Alta</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:12px;margin-top:8px;">
+        <button type="button" class="btn btn-ghost btn-full" onclick="closeMetaModal()">Cancelar</button>
+        <button type="submit" class="btn btn-primary btn-full" id="saveMetaBtn">Salvar Meta</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal Resolução -->
+<div class="modal-overlay" id="resolucaoModal">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header"><h3>Marcar como Resolvida</h3><button class="modal-close" onclick="closeResModal()">✕</button></div>
+    <input type="hidden" id="resMetaId"/>
+    <p style="margin-bottom:16px;font-size:.9rem" id="resMetaTitle"></p>
+    <div class="form-group"><label class="form-label">Nota (opcional)</label><textarea id="fResNote" class="form-textarea" placeholder="Descreva como você resolveu…"></textarea></div>
+    <div style="display:flex;gap:12px;">
+      <button class="btn btn-ghost btn-full" onclick="closeResModal()">Cancelar</button>
+      <button class="btn btn-success btn-full" onclick="saveResolucao()">✅ Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const user = requireAuth();
+populateUserUI();
+if (user && user.role !== 'master') document.getElementById('btnNovaMeta').style.display='none';
+
+const db = getDB();
+let allMetas = [];
+let minhasIds = new Set();
+let currentFilter = 'active';
+
+function setFilter(f, btn) {
+  currentFilter = f;
+  document.querySelectorAll('.section-card-header .btn-ghost').forEach(b=>b.style.color='');
+  btn.style.color = 'var(--primary)';
+  renderMetas();
+}
+
+async function loadMetas() {
+  const [snapMetas, snapRes, snapMin] = await Promise.all([
+    db.collection('metas').orderBy('created_at','desc').get(),
+    db.collection('meta_resolucoes').get(),
+    db.collection('meta_resolucoes').where('user_id','==',user.id).get()
+  ]);
+
+  allMetas = snapMetas.docs.map(d=>({id:d.id,...d.data()}));
+  minhasIds = new Set(snapMin.docs.map(d=>d.data().meta_id));
+
+  document.getElementById('statAtivas').textContent    = allMetas.filter(m=>m.status==='active').length;
+  document.getElementById('statResolucoes').textContent = snapRes.size;
+  document.getElementById('statMinhas').textContent     = minhasIds.size;
+
+  // Chart: resoluções por usuário (precisamos buscar nomes)
+  const byUserId = {};
+  snapRes.docs.forEach(d => { const r=d.data(); byUserId[r.user_id]=(byUserId[r.user_id]||0)+1; });
+
+  // Buscar nomes dos usuários
+  const userIds = Object.keys(byUserId);
+  const names = {};
+  await Promise.all(userIds.map(async uid => {
+    const docSnap = await db.collection('user_profiles').doc(uid).get();
+    names[uid] = docSnap.exists ? docSnap.data().name : uid.slice(0,8);
+  }));
+
+  const byName = {};
+  Object.entries(byUserId).forEach(([uid, count]) => { byName[names[uid]] = count; });
+
+  renderMetas();
+  renderChart(byName);
+}
+
+function renderMetas() {
+  const filtered = currentFilter==='active' ? allMetas.filter(m=>m.status!=='archived') : allMetas;
+  const el = document.getElementById('metasList');
+  if (filtered.length===0) { el.innerHTML='<div class="empty-state"><div class="empty-state-icon">🎯</div><p>Nenhuma meta cadastrada</p></div>'; return; }
+
+  const prioMap = {low:'🟢 Baixa',medium:'🟡 Média',high:'🔴 Alta'};
+  el.innerHTML = filtered.map(m => {
+    const resolved = minhasIds.has(m.id);
+    const days = m.deadline ? daysUntil(m.deadline) : null;
+    const deadlineHtml = m.deadline
+      ? `<span style="font-size:.78rem;color:${days!==null&&days<0?'var(--danger)':'var(--text-soft)'}">📅 ${formatDate(m.deadline)}${days<0?' (vencida)':days===0?' (hoje)':''}</span>` : '';
+    const mJson = JSON.stringify(m).replace(/"/g,'&quot;');
+    return `<div class="meta-item">
+      <div class="meta-header">
+        <div>
+          <div class="meta-title">${m.title}</div>
+          ${m.description?`<div class="meta-desc">${m.description}</div>`:''}
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">
+          <span class="badge badge-${m.priority}">${prioMap[m.priority]}</span>
+          ${user.role==='master'?`<div style="display:flex;gap:4px">
+            <button onclick="editMeta(${mJson})" class="btn btn-ghost btn-sm" style="padding:4px 8px">✏️</button>
+            <button onclick="deleteMeta('${m.id}')" class="btn btn-ghost btn-sm" style="padding:4px 8px;color:var(--danger)">🗑</button>
+          </div>`:''}
+        </div>
+      </div>
+      <div class="meta-footer">
+        <div>${deadlineHtml}</div>
+        ${resolved
+          ? '<span class="badge badge-done">✅ Você resolveu</span>'
+          : `<button onclick="openRes('${m.id}','${m.title.replace(/'/g,"\\'")}')" class="btn btn-outline btn-sm">Marcar como resolvida</button>`}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderChart(byName) {
+  const labels = Object.keys(byName);
+  const values = Object.values(byName);
+  const e = Chart.getChart('chartMetas'); if(e) e.destroy();
+  if (labels.length===0) {
+    document.getElementById('chartMetas').parentElement.innerHTML='<div class="empty-state"><div class="empty-state-icon">📊</div><p>Sem resoluções ainda</p></div>';
+    return;
+  }
+  new Chart(document.getElementById('chartMetas'),{
+    type:'bar',
+    data:{labels,datasets:[{label:'Resoluções',data:values,backgroundColor:['#B08D6A','#9E7E6F','#C4A882','#8B6F5E','#D4B896'],borderRadius:8}]},
+    options:{responsive:true,maintainAspectRatio:false,indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{stepSize:1}},y:{grid:{display:false}}}}
+  });
+}
+
+function openMetaModal() {
+  if(user.role!=='master'){showToast('Apenas o administrador pode criar metas.','error');return;}
+  document.getElementById('editMetaId').value=''; document.getElementById('metaModalTitle').textContent='Nova Meta';
+  document.getElementById('metaForm').reset(); document.getElementById('metaModal').classList.add('open');
+}
+function closeMetaModal() { document.getElementById('metaModal').classList.remove('open'); }
+
+function editMeta(m) {
+  document.getElementById('editMetaId').value=m.id; document.getElementById('metaModalTitle').textContent='Editar Meta';
+  document.getElementById('fTitle').value=m.title; document.getElementById('fDesc').value=m.description||'';
+  document.getElementById('fDeadline').value=m.deadline||''; document.getElementById('fPriority').value=m.priority;
+  document.getElementById('metaModal').classList.add('open');
+}
+
+async function deleteMeta(id) {
+  if(!confirm('Excluir esta meta?')) return;
+  const resDocs = await db.collection('meta_resolucoes').where('meta_id','==',id).get();
+  const batch = db.batch();
+  resDocs.docs.forEach(d=>batch.delete(d.ref));
+  batch.delete(db.collection('metas').doc(id));
+  await batch.commit();
+  showToast('Meta excluída.','info'); loadMetas();
+}
+
+document.getElementById('metaForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const btn=document.getElementById('saveMetaBtn'); btn.textContent='Salvando…'; btn.disabled=true;
+  const editId=document.getElementById('editMetaId').value;
+  const payload={title:document.getElementById('fTitle').value.trim(),description:document.getElementById('fDesc').value.trim(),deadline:document.getElementById('fDeadline').value||null,priority:document.getElementById('fPriority').value,status:'active',created_by:user.id,created_at:nowTimestamp()};
+  try {
+    if(editId) await db.collection('metas').doc(editId).update(payload);
+    else await db.collection('metas').add(payload);
+    showToast('Meta salva!','success'); closeMetaModal(); loadMetas();
+  } catch { showToast('Erro ao salvar.','error'); }
+  btn.textContent='Salvar Meta'; btn.disabled=false;
+});
+
+function openRes(metaId, metaTitle) {
+  document.getElementById('resMetaId').value=metaId;
+  document.getElementById('resMetaTitle').textContent=`Meta: ${metaTitle}`;
+  document.getElementById('fResNote').value='';
+  document.getElementById('resolucaoModal').classList.add('open');
+}
+function closeResModal() { document.getElementById('resolucaoModal').classList.remove('open'); }
+
+async function saveResolucao() {
+  const metaId = document.getElementById('resMetaId').value;
+  const note   = document.getElementById('fResNote').value.trim();
+  try {
+    await db.collection('meta_resolucoes').add({meta_id:metaId,user_id:user.id,note:note||null,resolved_at:nowTimestamp()});
+    showToast('Meta marcada como resolvida!','success'); closeResModal(); loadMetas();
+  } catch { showToast('Você já marcou esta meta como resolvida.','warning'); }
+}
+
+function openSidebar()  { document.getElementById('sidebar').classList.add('open'); document.getElementById('sidebarOverlay').classList.add('open'); }
+function closeSidebar() { document.getElementById('sidebar').classList.remove('open'); document.getElementById('sidebarOverlay').classList.remove('open'); }
+
+loadMetas();
+</script>
+</body>
+</html>

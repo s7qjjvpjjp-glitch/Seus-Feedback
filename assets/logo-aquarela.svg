@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 60" width="200" height="60">
+  <!-- Watercolor splash element -->
+  <ellipse cx="26" cy="30" rx="22" ry="18" fill="#F0E6DC" opacity="0.7"/>
+  <ellipse cx="32" cy="24" rx="14" ry="10" fill="#D4B896" opacity="0.5"/>
+  <ellipse cx="20" cy="36" rx="10" ry="8" fill="#B08D6A" opacity="0.4"/>
+  <!-- A stylized letter A -->
+  <path d="M15 44 L26 16 L37 44" stroke="#B08D6A" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M19 35 L33 35" stroke="#B08D6A" stroke-width="2" stroke-linecap="round"/>
+  <!-- Text -->
+  <text x="55" y="28" font-family="Georgia, serif" font-size="16" font-weight="bold" fill="#2D2926">Equipe</text>
+  <text x="55" y="47" font-family="Georgia, serif" font-size="20" font-weight="bold" fill="#B08D6A">Aquarela</text>
+</svg>
